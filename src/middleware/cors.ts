@@ -1,17 +1,11 @@
-import type { Context, Next } from 'hono';
+import { cors } from 'hono/cors'
 
 /**
- * CORS 中间件
+ * CORS 中间件 - 使用 Hono 内置的 cors
  */
-export async function corsMiddleware(c: Context, next: Next): Promise<void> {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (c.req.method === 'OPTIONS') {
-    c.status(204);
-    return;
-  }
-
-  await next();
-}
+export const corsMiddleware = cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+})
