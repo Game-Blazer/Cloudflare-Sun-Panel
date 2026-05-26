@@ -21,12 +21,12 @@ app.get('/api/health', (c) => {
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } });
 });
 
-// 路由挂载
-app.route('/api', authRoutes);      // /api/login, /api/register
-app.route('/api/panel', panelRoutes);   // /api/panel/itemIcon/*
-app.route('/api/panel', groupsRoutes);  // /api/panel/itemIconGroup/*
-app.route('/api/panel', usersRoutes);   // /api/panel/userConfig/*, /api/panel/users/*
-app.route('/api', usersRoutes);         // /api/user/*
-app.route('/api', settingsRoutes);      // /api/system/*, /api/about
+// 路由挂载（与前端 API 路径匹配）
+app.route('/', authRoutes);          // /login, /register
+app.route('/panel', panelRoutes);   // /panel/itemIcon/*
+app.route('/panel', groupsRoutes);  // /panel/itemIconGroup/*
+app.route('/panel', usersRoutes);   // /panel/userConfig/*, /panel/users/*
+app.route('/', usersRoutes);         // /user/*
+app.route('/', settingsRoutes);      // /system/*, /about
 
 export default app;
