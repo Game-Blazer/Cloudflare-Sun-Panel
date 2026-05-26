@@ -16,7 +16,11 @@ const app = new Hono<{ Bindings: Bindings }>();
 // CORS 中间件
 app.use('*', corsMiddleware);
 
-// 健康检查
+// 健康检查 / 根路由
+app.get('/', (c) => {
+  return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } });
+});
+
 app.get('/api/health', (c) => {
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } });
 });

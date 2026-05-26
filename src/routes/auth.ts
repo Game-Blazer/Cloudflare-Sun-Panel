@@ -11,6 +11,7 @@ const authApp = new Hono<{ Bindings: { DB: D1Database } }>();
  * POST /api/login
  */
 authApp.post('/login', async (c) => {
+  try {
   const body = await c.req.json<LoginRequest>();
   const db = c.env.DB;
 
@@ -53,6 +54,9 @@ authApp.post('/login', async (c) => {
   };
 
   return c.json({ code: 0, msg: 'ok', data: { token, userInfo } } satisfies ApiResponse);
+  } catch (e: any) {
+    return c.json({ code: 500, msg: e?.message || '服务器错误', data: null } satisfies ApiResponse);
+  }
 });
 
 /**
