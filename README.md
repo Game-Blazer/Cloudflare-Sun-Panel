@@ -190,29 +190,110 @@ npx wrangler deploy
 
 项目已配置 GitHub Actions 工作流（`.github/workflows/deploy-worker.yml`），推送代码到 `main` 分支即可自动部署。
 
-### 配置 GitHub Secrets
+### Repository Secrets 完整配置指南
 
-在 GitHub 仓库 → Settings → Secrets and variables → Actions 中添加以下 Secrets：
+部署前必须在 GitHub 仓库中配置以下 **3 个 Secrets**。每个 Secret 的作用和获取方式如下：
 
-| Secret 名称 | 说明 |
-|-------------|------|
-| `CF_API_TOKEN` | Cloudflare API Token（需要 Workers 编辑权限） |
-| `CF_ACCOUNT_ID` | Cloudflare Account ID |
-| `CF_D1_DATABASE_ID` | D1 数据库 ID |
+---
+
+#### ① `CF_API_TOKEN` — Cloudflare API 令牌
+
+| 属性 | 值 |
+|------|-----|
+| **作用** | 用于 `wrangler deploy` 认证，将 Worker 部署到 Cloudflare |
+| **使用位置** | `deploy-worker.yml` 第 42、48 行 |
+| **必填** | 是 |
+
+**获取方式：**
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. 点击右上角头像 → **「我的个人资料」(My Profile)**
+3. 左侧菜单选择 **「API 令牌」(API Tokens)**
+4. 点击 **「创建令牌」(Create Token)**
+5. 选择 **「编辑 Cloudflare Workers」(Edit Cloudflare Workers)** 模板
+6. 权限配置（默认即可）：
+   - **账户资源**：包括你的账户
+   - **区域资源**：包括所有区域
+7. 点击 **「继续以显示摘要」→「创建令牌」**
+8. **立即复制生成的 Token**（只显示一次，关闭后无法再次查看）
+
+> 也可使用全局 API Key 替代，但 Token 更安全。全局 Key 在「API 密钥」页面获取。
+
+---
+
+#### ② `CF_ACCOUNT_ID` — Cloudflare 账户 ID
+
+| 属性 | 值 |
+|------|-----|
+| **作用** | 指定部署目标账户，`wrangler deploy` 需要此 ID 定位账户 |
+| **使用位置** | `deploy-worker.yml` 第 43、49 行 |
+| **必填** | 是 |
+
+**获取方式：**
+
+- **方法一（Dashboard）**：登录 Cloudflare → 右侧边栏 **Workers & Pages** → 页面右侧直接可见「账户 ID」（Account ID），点击复制。
+- **方法二（Wrangler CLI）**：在终端执行 `wrangler whoami`，输出中「Account ID」即为所需值。
+- **方法三（URL）**：登录 Cloudflare Dashboard 后，浏览器地址栏 URL 格式为 `https://dash.cloudflare.com/<account-id>`，其中 `<account-id>` 就是 32 位十六进制字符串。
+
+---
+
+#### ③ `CF_D1_DATABASE_ID` — D1 数据库 ID
+
+| 属性 | 值 |
+|------|-----|
+| **作用** | 注入到 `wrangler.toml` 替换占位符 `__D1_DATABASE_ID__`，绑定正确的 D1 数据库 |
+| **使用位置** | `deploy-worker.yml` 第 37 行（sed 替换） |
+| **必填** | 是 |
+
+**获取方式：**
+
+1. 先在终端创建 D1 数据库（如果尚未创建）：
+   ```bash
+   wrangler d1 create sun-panel-db
+   ```
+2. 执行后会输出类似内容，复制其中的 `database_id` 值：
+   ```
+   [[d1_databases]]
+   binding = "DB"
+   database_name = "sun-panel-db"
+   database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   ```
+3. **替代方法**：登录 Cloudflare Dashboard → Workers & Pages → D1 → 选择 `sun-panel-db` → 页面显示「Database ID」，点击复制。
+
+---
+
+### Secrets 配置步骤
+
+在 GitHub 仓库页面操作：
+
+1. 进入 **Settings** → **Secrets and variables** → **Actions**
+2. 点击 **「New repository secret」** 按钮
+3. 依次添加以上 3 个 Secret：
+
+   | Name | Secret（填入对应值） |
+   |------|---------------------|
+   | `CF_API_TOKEN` | `d8b... 粘贴 Token` |
+   | `CF_ACCOUNT_ID` | `a1b2c3... 粘贴 32位 ID` |
+   | `CF_D1_DATABASE_ID` | `xxxx-xxxx-... 粘贴 UUID` |
+
+4. 添加完成后，列表应显示 3 个 Actions secrets
 
 ### 触发方式
 
 - **自动触发**：推送到 `main` 分支时（排除 `.md` 文件）
-- **手动触发**：在 GitHub Actions 页面点击「Run workflow」
+- **手动触发**：GitHub 仓库 → Actions →「Deploy to Cloudflare」→「Run workflow」
 
 ### 工作流步骤
 
-1. Checkout 代码
-2. 安装后端和前端依赖
-3. 构建前端（`vite build`）
-4. 注入 D1 database_id 到 wrangler.toml
-5. 部署 Worker + 静态资源
-6. 初始化/同步数据库 Schema
+| 步骤 | 操作 | 使用的 Secret |
+|------|------|-------------|
+| 1 | Checkout 代码 | — |
+| 2 | 安装 Worker 依赖 (`npm install`) | — |
+| 3 | 安装前端依赖 (`cd frontend && npm install`) | — |
+| 4 | 构建前端 (`npm run build`) | — |
+| 5 | 替换 `wrangler.toml` 中 D1 ID 占位符 | `CF_D1_DATABASE_ID` |
+| 6 | 部署 Worker + 静态资源 (`wrangler deploy`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
+| 7 | 初始化 D1 数据库表 (`db:init`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
 
 ---
 
