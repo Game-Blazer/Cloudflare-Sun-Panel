@@ -273,12 +273,12 @@ async function handleGuestLogin() {
       userInfoModalShow.value = false
       loginUsername.value = ''
       loginPassword.value = ''
-      router.go(0) // 刷新页面以管理员身份加载
+      window.location.reload() // 硬刷新，确保 store 重新初始化
     } else {
       message.error(res.msg || '登录失败')
     }
-  } catch {
-    message.error('网络错误')
+  } catch (e: any) {
+    message.error(e?.msg || '网络错误')
   } finally { loginLoading.value = false }
 }
 </script>

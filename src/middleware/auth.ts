@@ -66,8 +66,26 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
   }
 
   // 2. 无有效 token，尝试公开访问
-  const setting = await db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'").first() as { config_value: string } | null;
+  // 先查 panel_public_user_id，如果没设置再查 default_guest_mode
+  let setting = await db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'").first() as { config_value: string } | null;
+  
   if (!setting || !setting.config_value) {
+    // 查 default_guest_mode — 如果启用了默认访客模式，用第一个管理员账号
+    const guestMode = await db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'").first() as { config_value: string } | null;
+    if (guestMode && guestMode.config_value === '1') {
+      // 自动找第一个管理员作为公开用户
+      const adminUser = await db.prepare('SELECT id, username, name, head_image, role, status FROM users WHERE role = 1 LIMIT 1').first() as Record<string, unknown> | null;
+      if (adminUser) {
+        c.set('authUser', {
+          userId: adminUser.id as number,
+          username: adminUser.username as string,
+          role: adminUser.role as number,
+          visitMode: 1,
+        } as AuthUser);
+        await next();
+        return;
+      }
+    }
     c.status(401);
     return c.json({ code: 401, msg: '未登录且未启用公开模式', data: null });
   }
