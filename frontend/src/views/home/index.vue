@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NModal, NSpin, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NModal, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getGroupList, saveGroupSort } from '@/api/index'
+import { getGroupList } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getUserConfig } from '@/api/index'
 import { getAbout, getAuthInfo } from '@/api/index'
@@ -52,6 +52,13 @@ const editingItem = ref<Panel.ItemInfo>({
   itemIconGroupId: undefined,
 })
 const editingGroupId = ref<number>()
+
+// 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
+const editModeGroupId = ref<number | null>(null)
+
+function toggleEditMode(groupId: number) {
+  editModeGroupId.value = editModeGroupId.value === groupId ? null : groupId
+}
 
 // AppStarter
 const starterShow = ref(false)
@@ -227,11 +234,6 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
 }
 
 // ====== 排序 ======
-async function saveGroupSortOrder() {
-  const sortItems = groups.value.filter(g => g.id).map((g, i) => ({ id: g.id!, sort: i }))
-  try { const res = await saveGroupSort(sortItems); if (res.code === 0) message.success('排序已保存') } catch { /* ignore */ }
-}
-
 async function saveItemSortOrder(group: ItemGroup) {
   const sortItems = (group.items || []).filter(g => g.id).map((item, i) => ({ id: item.id!, sort: i }))
   try { const res = await saveItemSort({ sortItems, itemIconGroupId: group.id! }); if (res.code === 0) message.success('排序已保存') } catch { /* ignore */ }
@@ -279,38 +281,56 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
       <NSpin :show="loading">
-        <VueDraggable v-model="groups" :animation="200" handle=".group-drag-handle" :disabled="authStore.isVisitMode" @end="saveGroupSortOrder">
-          <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
-            <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
-              <div class="flex items-center gap-2 mb-3 px-2">
-                <span v-if="!authStore.isVisitMode" class="group-drag-handle cursor-move text-gray-400 text-sm">::</span>
-                <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>
-                <NButton v-if="!authStore.isVisitMode" size="tiny" @click="openAddItem(group.id!)">+ 添加</NButton>
-              </div>
-              <VueDraggable v-model="group.items" :animation="200" :disabled="authStore.isVisitMode" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
-                <div v-for="(item, ii) in group.items" :key="item.id || ii"
-                  class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
-                  @click="openUrl(item)">
-                  <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                    <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" />
-                    <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                      :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                      {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                    </div>
-                  </div>
-                  <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
-                  <div v-if="!authStore.isVisitMode" class="absolute top-1 right-1 opacity-0 group-item-hover:opacity-100 transition-opacity flex gap-1">
-                    <NButton size="tiny" @click.stop="openEditItem(item)">编辑</NButton>
-                    <NButton size="tiny" type="error" @click.stop="handleDeleteItem(item)">删除</NButton>
+        <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
+          <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
+            <div class="flex items-center gap-2 mb-3 px-2">
+              <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>
+              <NButton v-if="!authStore.isVisitMode" size="tiny" :type="editModeGroupId === group.id ? 'warning' : 'default'" @click="toggleEditMode(group.id!)">
+                {{ editModeGroupId === group.id ? '完成' : '编辑' }}
+              </NButton>
+              <NButton v-if="!authStore.isVisitMode" size="tiny" @click="openAddItem(group.id!)">+ 添加</NButton>
+            </div>
+            <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
+              <div v-for="(item, ii) in group.items" :key="item.id || ii"
+                class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
+                @click="openUrl(item)">
+                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" />
+                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                    :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                    {{ item.icon?.text || item.title?.charAt(0) || '?' }}
                   </div>
                 </div>
-              </VueDraggable>
-              <div v-if="!group.items || group.items.length === 0" class="text-center text-gray-400 py-4 text-sm">
-                {{ authStore.isVisitMode ? '暂无图标' : '暂无图标，点击" + 添加"创建' }}
+                <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
+                <div class="absolute top-1 right-1 flex gap-1">
+                  <NButton size="tiny" @click.stop="openEditItem(item)">编辑</NButton>
+                  <NButton size="tiny" type="error" @click.stop="handleDeleteItem(item)">删除</NButton>
+                </div>
               </div>
+            </VueDraggable>
+            <div v-else class="flex flex-wrap gap-3">
+              <NTooltip v-for="(item, ii) in group.items" :key="item.id || ii" trigger="hover" :disabled="!item.description" placement="bottom">
+                <template #trigger>
+                  <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
+                    @click="openUrl(item)">
+                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" />
+                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
+                      </div>
+                    </div>
+                    <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
+                  </div>
+                </template>
+                <span>{{ item.description }}</span>
+              </NTooltip>
             </div>
-          </template>
-        </VueDraggable>
+            <div v-if="!group.items || group.items.length === 0" class="text-center text-gray-400 py-4 text-sm">
+              {{ authStore.isVisitMode ? '暂无图标' : '暂无图标，点击" + 添加"创建' }}
+            </div>
+          </div>
+        </template>
       </NSpin>
     </div>
 
@@ -360,6 +380,4 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </template>
 
 <style scoped>
-.group-item:hover .group-item-hover\:opacity-100 { opacity: 1; }
-.group-item-hover\:opacity-100 { opacity: 0; }
 </style>

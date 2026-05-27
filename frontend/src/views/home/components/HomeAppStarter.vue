@@ -2,8 +2,9 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
+import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
-import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getGroupList, getItemsByGroup, addItems } from '@/api/index'
+import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getGroupList, getItemsByGroup, addItems, saveGroupSort } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
 import { createExportData, downloadJSON, validateImportData, readFileAsText, type ExportGroup, type ExportData } from '@/utils/importExport'
 
@@ -126,6 +127,15 @@ async function handleDeleteGroup(group: any) {
   try {
     const res = await deleteGroups([group.id])
     if (res.code === 0) { message.success('删除成功'); props.onSaved() }
+  } catch { message.error('网络错误') }
+}
+
+async function handleGroupSortEnd() {
+  const sortItems = props.groups.filter((g: any) => g.id).map((g: any, i: number) => ({ id: g.id!, sort: i }))
+  try {
+    const res = await saveGroupSort(sortItems)
+    if (res.code === 0) { message.success('分组排序已保存'); props.onSaved() }
+    else message.error(res.msg || '排序保存失败')
   } catch { message.error('网络错误') }
 }
 
@@ -299,9 +309,11 @@ async function importData(data: ExportData) {
           <!-- ====== 分组管理 ====== -->
           <div v-if="activeApp === 'GroupManage'" class="flex flex-col gap-4">
             <div class="flex gap-2"><NButton type="primary" size="small" @click="openAddGroup">添加分组</NButton></div>
-            <div class="flex flex-col gap-2 max-h-[380px] overflow-auto">
-              <div v-for="group in groups" :key="group.id" class="flex items-center justify-between p-3 border rounded">
+            <div class="text-xs text-gray-400">拖拽分组可调整排序</div>
+            <VueDraggable v-model="props.groups" :animation="200" class="flex flex-col gap-2 max-h-[340px] overflow-auto" @end="handleGroupSortEnd">
+              <div v-for="(group, gi) in props.groups" :key="group.id || gi" class="flex items-center justify-between p-3 border rounded cursor-move bg-white/50 dark:bg-gray-800/50">
                 <div class="flex items-center gap-2">
+                  <span class="text-gray-400 text-sm cursor-move">⠿</span>
                   <span class="font-medium">{{ group.title }}</span>
                   <span class="text-xs px-1.5 py-0.5 rounded" :class="group.publicVisible !== 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
                     {{ group.publicVisible !== 0 ? '访客可见' : '隐藏' }}
@@ -312,7 +324,7 @@ async function importData(data: ExportData) {
                   <NButton size="tiny" type="error" @click="handleDeleteGroup(group)">删除</NButton>
                 </div>
               </div>
-            </div>
+            </VueDraggable>
           </div>
 
           <!-- ====== 导入导出 ====== -->
