@@ -146,12 +146,15 @@ async function loadData() {
     if (res.code === 0) {
       const list = (res.data || []) as ItemGroup[]
       groups.value = list.map(g => ({ ...g, hoverStatus: false, sortStatus: false, items: [] }))
-      for (const g of groups.value) {
-        if (g.id) {
-          const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
-          if (itemRes.code === 0) g.items = itemRes.data || []
-        }
-      }
+      // 并行获取所有分组的图标
+      await Promise.all(
+        groups.value.map(async (g) => {
+          if (g.id) {
+            const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
+            if (itemRes.code === 0) g.items = itemRes.data || []
+          }
+        })
+      )
     }
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
@@ -164,15 +167,11 @@ async function loadPanelConfig() {
 }
 
 function refreshAll() {
-  loadData()
-  loadPanelConfig()
-  loadSiteConfig()
+  Promise.all([loadData(), loadPanelConfig(), loadSiteConfig()])
 }
 
 onMounted(() => {
-  loadSiteConfig()
-  loadData()
-  loadPanelConfig()
+  Promise.all([loadSiteConfig(), loadData(), loadPanelConfig()])
 })
 
 // ====== 图标编辑 ======

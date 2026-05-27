@@ -107,15 +107,15 @@ groupsApp.post('/itemIconGroup/deletes', async (c) => {
 
   const placeholders = ids.map(() => '?').join(',');
 
-  // 删除图标
-  await db.prepare(
-    `DELETE FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ?`
-  ).bind(...ids, user!.userId).run();
-
-  // 删除分组
-  await db.prepare(
-    `DELETE FROM item_icon_groups WHERE id IN (${placeholders}) AND user_id = ?`
-  ).bind(...ids, user!.userId).run();
+  // 并行删除图标和分组
+  await Promise.all([
+    db.prepare(
+      `DELETE FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ?`
+    ).bind(...ids, user!.userId).run(),
+    db.prepare(
+      `DELETE FROM item_icon_groups WHERE id IN (${placeholders}) AND user_id = ?`
+    ).bind(...ids, user!.userId).run(),
+  ]);
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
 });

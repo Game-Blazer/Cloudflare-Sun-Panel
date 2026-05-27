@@ -65,14 +65,22 @@ settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, as
     return c.json({ code: 400, msg: '数据不能为空', data: null } satisfies ApiResponse);
   }
 
-  for (const [configName, configValue] of Object.entries(body)) {
-    const existing = await db.prepare('SELECT id FROM system_settings WHERE config_name = ?').bind(configName).first();
-    if (existing) {
-      await db.prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = ?").bind(configValue ?? '', configName).run();
-    } else {
-      await db.prepare('INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)').bind(configName, configValue ?? '').run();
-    }
-  }
+  // 并行检查所有配置是否存在，再批量保存
+  const entries = Object.entries(body);
+  const checks = await Promise.all(
+    entries.map(([configName]) =>
+      db.prepare('SELECT id FROM system_settings WHERE config_name = ?').bind(configName).first()
+    )
+  );
+  await Promise.all(
+    entries.map(([configName, configValue], i) => {
+      if (checks[i]) {
+        return db.prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = ?").bind(configValue ?? '', configName).run();
+      } else {
+        return db.prepare('INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)').bind(configName, configValue ?? '').run();
+      }
+    })
+  );
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
 });

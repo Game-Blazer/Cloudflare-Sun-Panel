@@ -143,22 +143,25 @@ async function handleExport() {
   try {
     const res = await getGroupList<Panel.ItemIconGroup[]>()
     if (res.code === 0) {
+      const groupList = res.data || []
+      // 并行获取所有分组的图标
+      const itemsResults = await Promise.all(
+        groupList.map(g => g.id ? getItemsByGroup<Panel.ItemInfo[]>(g.id) : null)
+      )
       const groups: ExportGroup[] = []
-      for (const g of (res.data || [])) {
+      groupList.forEach((g, i) => {
         const group: ExportGroup = { title: g.title || '', sort: g.sort || 0, children: [] }
-        if (g.id) {
-          const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
-          if (itemRes.code === 0) {
-            for (const item of (itemRes.data || [])) {
-              group.children.push({
-                title: item.title, sort: item.sort || 0, icon: item.icon,
-                url: item.url, description: item.description || '', openMethod: item.openMethod || 1,
-              })
-            }
+        const itemRes = itemsResults[i]
+        if (itemRes && itemRes.code === 0) {
+          for (const item of (itemRes.data || [])) {
+            group.children.push({
+              title: item.title, sort: item.sort || 0, icon: item.icon,
+              url: item.url, description: item.description || '', openMethod: item.openMethod || 1,
+            })
           }
         }
         groups.push(group)
-      }
+      })
       const data = createExportData(groups)
       downloadJSON(data)
       message.success('导出成功')

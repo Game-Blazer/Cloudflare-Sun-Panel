@@ -157,11 +157,10 @@ usersApp.post('/users/getList', authMiddleware, adminMiddleware, async (c) => {
 
   const offset = (page - 1) * pageSize;
 
-  const rows = await db.prepare(
-    'SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?'
-  ).bind(pageSize, offset).all();
-
-  const countResult = await db.prepare('SELECT COUNT(*) as total FROM users').first() as unknown as { total: number };
+  const [rows, countResult] = await Promise.all([
+    db.prepare('SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?').bind(pageSize, offset).all(),
+    db.prepare('SELECT COUNT(*) as total FROM users').first() as Promise<{ total: number }>,
+  ]);
 
   const list = rows.results.map(row => {
     const r = row as unknown as UserRow;
@@ -280,11 +279,13 @@ usersApp.post('/users/deletes', authMiddleware, adminMiddleware, async (c) => {
 
   const placeholders = filteredIds.map(() => '?').join(',');
 
-  // 删除关联数据
-  await db.prepare(`DELETE FROM item_icons WHERE user_id IN (${placeholders})`).bind(...filteredIds).run();
-  await db.prepare(`DELETE FROM item_icon_groups WHERE user_id IN (${placeholders})`).bind(...filteredIds).run();
-  await db.prepare(`DELETE FROM user_configs WHERE user_id IN (${placeholders})`).bind(...filteredIds).run();
-  await db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).bind(...filteredIds).run();
+  // 并行删除关联数据
+  await Promise.all([
+    db.prepare(`DELETE FROM item_icons WHERE user_id IN (${placeholders})`).bind(...filteredIds).run(),
+    db.prepare(`DELETE FROM item_icon_groups WHERE user_id IN (${placeholders})`).bind(...filteredIds).run(),
+    db.prepare(`DELETE FROM user_configs WHERE user_id IN (${placeholders})`).bind(...filteredIds).run(),
+    db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).bind(...filteredIds).run(),
+  ]);
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
 });
@@ -340,13 +341,14 @@ usersApp.post('/users/setPublicVisitUser', authMiddleware, adminMiddleware, asyn
     return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
   }
 
-  // 检查用户是否存在
-  const user = await db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+  // 并行检查用户是否存在 + 已有设置
+  const [user, existing] = await Promise.all([
+    db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first(),
+    db.prepare("SELECT id FROM system_settings WHERE config_name = 'panel_public_user_id'").first(),
+  ]);
   if (!user) {
     return c.json({ code: 400, msg: '用户不存在', data: null } satisfies ApiResponse);
   }
-
-  const existing = await db.prepare("SELECT id FROM system_settings WHERE config_name = 'panel_public_user_id'").first();
 
   if (existing) {
     await db.prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = 'panel_public_user_id'").bind(String(userId)).run();
