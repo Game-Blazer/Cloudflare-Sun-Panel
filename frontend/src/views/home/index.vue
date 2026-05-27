@@ -268,13 +268,12 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <!-- 顶部：Logo + 访客标识 -->
-    <div class="relative z-10 flex justify-between items-center p-4">
+    <div class="sticky top-0 z-20 flex justify-between items-center p-4 bg-gray-900/60 backdrop-blur-sm">
       <div class="flex items-center gap-3">
         <img v-if="siteConfig.logo_image_src" :src="siteConfig.logo_image_src" class="h-8 rounded" alt="Logo" />
         <span class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
-      <!-- 顶部不放置任何按钮 -->
       <div></div>
     </div>
 
@@ -357,7 +356,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     </div>
 
     <!-- 自定义页脚 -->
-    <div v-if="siteConfig.footer_html" class="relative z-10 text-center py-4 text-gray-400 text-sm" v-html="siteConfig.footer_html" />
+    <div v-if="siteConfig.footer_html" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm bg-gray-900/60 backdrop-blur-sm" v-html="siteConfig.footer_html" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">

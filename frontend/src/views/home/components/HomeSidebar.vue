@@ -82,20 +82,23 @@ onUnmounted(() => {
   <div v-if="!isMobile" class="sidebar-root" @mouseenter="expanded = true" @mouseleave="expanded = false">
     <div class="sidebar-bar" :class="{ expanded }">
       <div class="sidebar-inner">
-        <div
-          v-for="(item, i) in navItems"
-          :key="i"
-          class="nav-item"
-          @click="scrollToGroup(i)"
-        >
-          <div class="nav-slip" />
-          <span class="nav-title">{{ item.title }}</span>
+        <!-- 分组导航（可滚动） -->
+        <div class="sidebar-nav">
+          <div
+            v-for="(item, i) in navItems"
+            :key="i"
+            class="nav-item"
+            @click="scrollToGroup(i)"
+          >
+            <div class="nav-slip" />
+            <span class="nav-title">{{ item.title }}</span>
+          </div>
         </div>
 
         <!-- 分隔线 -->
         <div class="sidebar-divider" />
 
-        <!-- 底部操作按钮 -->
+        <!-- 底部操作按钮（始终可见） -->
         <div class="sidebar-actions">
           <template v-if="!authStore.isVisitMode">
             <div class="nav-item sidebar-action-item" @click="handleSettings">
@@ -169,7 +172,6 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   transition: width 0.3s ease, background-color 0.3s ease;
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
@@ -184,6 +186,30 @@ onUnmounted(() => {
 
 .sidebar-inner {
   width: 200px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.sidebar-actions {
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 .nav-item {
