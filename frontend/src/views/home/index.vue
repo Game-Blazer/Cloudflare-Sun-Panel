@@ -168,11 +168,16 @@ async function loadPanelConfig() {
 }
 
 function refreshAll() {
-  Promise.all([updateLocalUserInfo(), loadData(), loadPanelConfig(), loadSiteConfig()])
+  updateLocalUserInfo().then(() => {
+    Promise.all([loadData(), loadPanelConfig(), loadSiteConfig()])
+  })
 }
 
-onMounted(() => {
-  Promise.all([updateLocalUserInfo(), loadSiteConfig(), loadData(), loadPanelConfig()])
+onMounted(async () => {
+  await updateLocalUserInfo() // 优先同步认证状态，避免渲染时显示错误的角色
+  loadSiteConfig() // siteConfig 有本地缓存兜底，无需 await
+  loadData()
+  loadPanelConfig()
 })
 
 // ====== 图标编辑 ======
@@ -233,8 +238,15 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
+  <!-- 壁纸预加载：隐藏 img 触发浏览器提前下载 -->
+  <img
+    v-if="panelState.panelConfig.backgroundImageSrc"
+    :src="panelState.panelConfig.backgroundImageSrc"
+    class="hidden"
+    alt=""
+  />
   <!-- 壁纸层 - 独立全屏背景图，blur 直接作用于图片（参照原项目） -->
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-0" :style="{
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
     backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
     backgroundSize: 'cover',
@@ -242,11 +254,11 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     backgroundRepeat: 'no-repeat',
   }" />
   <!-- 遮罩层 - 半透明黑色覆盖 -->
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-0" :style="{
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
-  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container">
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }">
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" />
 
