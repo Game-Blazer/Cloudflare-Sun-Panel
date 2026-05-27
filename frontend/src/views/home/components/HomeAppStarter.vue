@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
 import { saveSiteSettings } from '@/api/index'
 import { setUserConfig } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
+import { createExportData, downloadJSON, validateImportData, readFileAsText, type ExportGroup, type ExportData } from '@/utils/importExport'
 
 interface App {
   name: string
@@ -33,6 +35,7 @@ const show = computed({
 const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
+const { panelConfig } = storeToRefs(panelState)
 const appStore = useAppStore()
 
 const activeApp = ref('UserInfo')
@@ -47,6 +50,7 @@ const apps = computed<App[]>(() => {
     { name: '我的信息', key: 'UserInfo', icon: '👤' },
     { name: '风格设置', key: 'Style', icon: '🎨' },
     { name: '分组管理', key: 'GroupManage', icon: '📁' },
+    { name: '导入导出', key: 'ImportExport', icon: '📦' },
   ]
   if (authStore.isAdmin) {
     list.push({ name: '用户管理', key: 'Users', icon: '👥', adminOnly: true })
@@ -132,6 +136,83 @@ function openAddGroup() {
   editingGroup.value = { title: '', publicVisible: 1 }
   editGroupModalVisible.value = true
 }
+
+// ====== 导入导出 ======
+const importExportLoading = ref(false)
+const fileInputRef = ref<HTMLInputElement>()
+
+async function handleExport() {
+  importExportLoading.value = true
+  try {
+    const { getGroupList, getItemsByGroup } = await import('@/api/index')
+    const res = await getGroupList<Panel.ItemIconGroup[]>()
+    if (res.code === 0) {
+      const groups: ExportGroup[] = []
+      for (const g of (res.data || [])) {
+        const group: ExportGroup = { title: g.title || '', sort: g.sort || 0, children: [] }
+        if (g.id) {
+          const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
+          if (itemRes.code === 0) {
+            for (const item of (itemRes.data || [])) {
+              group.children.push({
+                title: item.title, sort: item.sort || 0, icon: item.icon,
+                url: item.url, description: item.description || '', openMethod: item.openMethod || 1,
+              })
+            }
+          }
+        }
+        groups.push(group)
+      }
+      const data = createExportData(groups)
+      downloadJSON(data)
+      message.success('导出成功')
+    }
+  } catch { message.error('导出失败') }
+  finally { importExportLoading.value = false }
+}
+
+async function handleImportFile(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  importExportLoading.value = true
+  try {
+    const text = await readFileAsText(file)
+    const result = validateImportData(text)
+    if (!result.valid || !result.data) {
+      message.error(result.error || '导入失败')
+      return
+    }
+    await importData(result.data)
+    message.success('导入成功，请刷新页面查看')
+    props.onSaved()
+  } catch (err: any) {
+    message.error(err?.message || '导入失败')
+  }
+  finally {
+    importExportLoading.value = false
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
+}
+
+async function importData(data: ExportData) {
+  const { saveGroup, addItems } = await import('@/api/index')
+  for (const g of data.icons) {
+    const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort })
+    if (groupRes.code === 0 && groupRes.data?.id) {
+      const groupId = groupRes.data.id
+      const items: Panel.ItemInfo[] = g.children.map(item => ({
+        ...item, itemIconGroupId: groupId,
+      }))
+      // 分批添加（每批50个）
+      const batchSize = 50
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize)
+        await addItems(batch)
+      }
+    }
+  }
+}
 </script>
 
 <template>
@@ -200,17 +281,17 @@ function openAddGroup() {
           <!-- ====== 风格设置 ====== -->
           <div v-if="activeApp === 'Style'" class="flex flex-col gap-4">
             <div><label class="block text-sm mb-1 font-medium">壁纸地址</label>
-              <input :value="panelState.panelConfig.backgroundImageSrc" @input="(e: any) => panelState.panelConfig.backgroundImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
-            <div><label class="block text-sm mb-1 font-medium">模糊度: {{ panelState.panelConfig.backgroundBlur || 0 }}</label>
-              <input :value="panelState.panelConfig.backgroundBlur" @input="(e: any) => panelState.panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
-            <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelState.panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
-              <input :value="panelState.panelConfig.backgroundMaskNumber" @input="(e: any) => panelState.panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
+              <input :value="panelConfig.backgroundImageSrc" @input="(e: any) => panelConfig.backgroundImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
+            <div><label class="block text-sm mb-1 font-medium">模糊度: {{ panelConfig.backgroundBlur || 0 }}</label>
+              <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
+            <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
+              <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">最大宽度</label>
-              <input :value="panelState.panelConfig.maxWidth" @input="(e: any) => panelState.panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div><label class="block text-sm mb-1 font-medium">上边距</label>
-              <input :value="panelState.panelConfig.marginTop" @input="(e: any) => panelState.panelConfig.marginTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.marginTop" @input="(e: any) => panelConfig.marginTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div><label class="block text-sm mb-1 font-medium">下边距</label>
-              <input :value="panelState.panelConfig.marginBottom" @input="(e: any) => panelState.panelConfig.marginBottom = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.marginBottom" @input="(e: any) => panelConfig.marginBottom = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton @click="resetSettings">重置</NButton>
               <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
@@ -233,6 +314,16 @@ function openAddGroup() {
                   <NButton size="tiny" type="error" @click="handleDeleteGroup(group)">删除</NButton>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- ====== 导入导出 ====== -->
+          <div v-if="activeApp === 'ImportExport'" class="flex flex-col gap-4 items-center py-6">
+            <p class="text-sm text-gray-500 mb-4">导出格式为 .sun-panel.json，可跨设备备份和恢复</p>
+            <input ref="fileInputRef" type="file" accept=".sun-panel.json,.json" class="hidden" @change="handleImportFile" />
+            <div class="flex gap-4">
+              <NButton type="primary" :loading="importExportLoading" @click="handleExport">导出数据</NButton>
+              <NButton :loading="importExportLoading" @click="fileInputRef?.click()">导入数据</NButton>
             </div>
           </div>
 

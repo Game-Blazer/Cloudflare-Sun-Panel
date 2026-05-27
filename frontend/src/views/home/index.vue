@@ -10,6 +10,7 @@ import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '
 import { getUserConfig } from '@/api/index'
 import { getAbout } from '@/api/index'
 import HomeAppStarter from './components/HomeAppStarter.vue'
+import HomeSidebar from './components/HomeSidebar.vue'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -233,10 +234,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col" :style="backgroundStyle">
+  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container" :style="backgroundStyle">
     <!-- 背景遮罩层 -->
     <div v-if="panelState.panelConfig.backgroundImageSrc" class="absolute inset-0 bg-black/50 pointer-events-none"
       :style="{ backdropFilter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`, opacity: panelState.panelConfig.backgroundMaskNumber ?? 0.3 }" />
+
+    <!-- 侧边栏分组导航 -->
+    <HomeSidebar :groups="visibleGroups" />
 
     <!-- 顶部：Logo + 访客标识 -->
     <div class="relative z-10 flex justify-between items-center p-4">
@@ -254,7 +258,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       <NSpin :show="loading">
         <VueDraggable v-model="groups" :animation="200" handle=".group-drag-handle" :disabled="authStore.isVisitMode" @end="saveGroupSortOrder">
           <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
-            <div class="mb-6">
+            <div class="mb-6 group-section">
               <div class="flex items-center gap-2 mb-3 px-2">
                 <span v-if="!authStore.isVisitMode" class="group-drag-handle cursor-move text-gray-400 text-sm">::</span>
                 <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>
