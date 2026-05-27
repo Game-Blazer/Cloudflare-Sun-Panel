@@ -84,14 +84,16 @@ onUnmounted(() => {
       <div class="sidebar-inner">
         <!-- 分组导航（可滚动） -->
         <div class="sidebar-nav">
-          <div
-            v-for="(item, i) in navItems"
-            :key="i"
-            class="nav-item"
-            @click="scrollToGroup(i)"
-          >
-            <div class="nav-slip" />
-            <span class="nav-title">{{ item.title }}</span>
+          <div class="sidebar-nav-inner">
+            <div
+              v-for="(item, i) in navItems"
+              :key="i"
+              class="nav-item"
+              @click="scrollToGroup(i)"
+            >
+              <div class="nav-slip" />
+              <span class="nav-title">{{ item.title }}</span>
+            </div>
           </div>
         </div>
 
@@ -196,6 +198,13 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-nav-inner {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .sidebar-nav::-webkit-scrollbar {
