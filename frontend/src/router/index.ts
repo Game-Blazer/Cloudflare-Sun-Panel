@@ -34,7 +34,6 @@ export const router = createRouter({
 // 路由守卫：确保未认证且未开启公开模式时，只能访问登录页
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('sun-panel-token')
-  const visitMode = Number(localStorage.getItem('sun-panel-visit-mode')) || 0
   const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
 
   // 已登录用户访问登录页，直接跳转首页
@@ -43,9 +42,14 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // 首页需要认证：有 token 或 公开模式可用（访客模式）
+  // 首页：无 token 但公开模式可用 → 自动进入访客模式
   if (to.name === 'Home') {
-    if (!token && !(visitMode === 1 && publicModeAvailable)) {
+    if (!token) {
+      if (publicModeAvailable) {
+        localStorage.setItem('sun-panel-visit-mode', '1')
+        next()
+        return
+      }
       next({ name: 'login' })
       return
     }
