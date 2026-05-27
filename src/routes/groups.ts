@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
-import { authMiddleware, getAuthUser } from '../middleware/auth';
+import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
 import type { ApiResponse, ItemIconGroupRequest, ItemIconGroupRow } from '../models/types';
 
 const groupsApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
-groupsApp.use('*', authMiddleware);
+groupsApp.use('*', publicModeMiddleware);
 
 // 将 row 转为前端格式
 function formatGroup(row: ItemIconGroupRow) {

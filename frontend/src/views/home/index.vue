@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NButtonGroup, NDropdown, NModal, NPopover, NSpin, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NModal, NPopover, NSpin, useMessage } from 'naive-ui'
 import { nextTick, onMounted, ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
+import { VisitMode } from '@/store/modules/auth'
 import { getGroupList, saveGroup, deleteGroups, saveGroupSort } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getUserConfig, setUserConfig } from '@/api/index'
-import { PanelStateNetworkModeEnum } from '@/enums'
+import UsersManage from '@/components/apps/Users/index.vue'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -48,6 +49,9 @@ const userInfoModalShow = ref(false)
 
 const scrollContainerRef = ref<HTMLElement>()
 
+// 用户管理弹窗
+const usersManageShow = ref(false)
+
 // 页面样式
 const backgroundStyle = computed(() => {
   const config = panelState.panelConfig
@@ -74,9 +78,6 @@ const containerStyle = computed(() => {
 
 function openUrl(item: Panel.ItemInfo) {
   let url = item.url
-  if (panelState.networkMode === PanelStateNetworkModeEnum.lan && item.lanUrl)
-    url = item.lanUrl
-
   switch (item.openMethod) {
     case 1:
       window.location.href = url
@@ -98,7 +99,6 @@ async function loadData() {
       const list = (res.data || []) as ItemGroup[]
       groups.value = list.map(g => ({ ...g, hoverStatus: false, sortStatus: false, items: [] }))
 
-      // 加载每个分组的图标
       for (const g of groups.value) {
         if (g.id) {
           const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
@@ -132,7 +132,6 @@ function openAddItem(groupId: number) {
   editingItem.value = {
     title: '',
     url: '',
-    lanUrl: '',
     description: '',
     openMethod: 1,
     icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
@@ -299,36 +298,38 @@ function handleLogout() {
 
     <!-- 顶部工具栏 -->
     <div class="relative z-10 flex justify-between items-center p-4">
-      <div class="text-white text-xl font-bold">
-        {{ panelState.panelConfig.logoText || 'Sun-Panel' }}
+      <div class="flex items-center gap-2">
+        <span class="text-white text-xl font-bold">
+          {{ panelState.panelConfig.logoText || 'Sun-Panel' }}
+        </span>
+        <span
+          v-if="authStore.isVisitMode"
+          class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded"
+        >
+          访客模式
+        </span>
       </div>
       <div class="flex gap-2">
-        <!-- 内外网切换 -->
-        <NButtonGroup v-if="panelState.panelConfig.netModeChangeButtonShow">
-          <NButton
-            size="small"
-            :type="panelState.networkMode === 'wan' ? 'primary' : 'default'"
-            @click="panelState.setNetworkMode('wan')"
-          >
-            公网
+        <!-- 管理员可见按钮 -->
+        <template v-if="authStore.isAdmin && !authStore.isVisitMode">
+          <NButton size="small" @click="usersManageShow = true">
+            用户管理
           </NButton>
-          <NButton
-            size="small"
-            :type="panelState.networkMode === 'lan' ? 'primary' : 'default'"
-            @click="panelState.setNetworkMode('lan')"
-          >
-            内网
+          <NButton size="small" @click="groupModalShow = true">
+            分组管理
           </NButton>
-        </NButtonGroup>
+          <NButton size="small" @click="settingModalShow = true">
+            风格设置
+          </NButton>
+        </template>
 
-        <NButton size="small" @click="groupModalShow = true">
-          分组管理
-        </NButton>
-        <NButton size="small" @click="settingModalShow = true">
-          风格设置
-        </NButton>
         <NButton size="small" @click="userInfoModalShow = true">
           我的
+        </NButton>
+
+        <!-- 登录用户退出按钮 -->
+        <NButton v-if="!authStore.isVisitMode" size="small" type="error" @click="handleLogout">
+          退出
         </NButton>
       </div>
     </div>
@@ -340,6 +341,7 @@ function handleLogout() {
           v-model="groups"
           :animation="200"
           handle=".group-drag-handle"
+          :disabled="authStore.isVisitMode"
           @end="saveGroupSortOrder"
         >
           <div
@@ -349,9 +351,16 @@ function handleLogout() {
           >
             <!-- 分组标题 -->
             <div class="flex items-center gap-2 mb-3 px-2">
-              <span class="group-drag-handle cursor-move text-gray-400 text-sm">::</span>
+              <span
+                v-if="!authStore.isVisitMode"
+                class="group-drag-handle cursor-move text-gray-400 text-sm"
+              >::</span>
               <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>
-              <NButton size="tiny" @click="openAddItem(group.id!)">
+              <NButton
+                v-if="!authStore.isVisitMode"
+                size="tiny"
+                @click="openAddItem(group.id!)"
+              >
                 + 添加
               </NButton>
             </div>
@@ -360,6 +369,7 @@ function handleLogout() {
             <VueDraggable
               v-model="group.items"
               :animation="200"
+              :disabled="authStore.isVisitMode"
               class="flex flex-wrap gap-3"
               @end="saveItemSortOrder(group)"
             >
@@ -390,8 +400,11 @@ function handleLogout() {
                   {{ item.title }}
                 </span>
 
-                <!-- 悬浮操作按钮 -->
-                <div class="absolute top-1 right-1 opacity-0 group-item-hover:opacity-100 transition-opacity flex gap-1">
+                <!-- 悬浮操作按钮 (仅非访客模式) -->
+                <div
+                  v-if="!authStore.isVisitMode"
+                  class="absolute top-1 right-1 opacity-0 group-item-hover:opacity-100 transition-opacity flex gap-1"
+                >
                   <NButton size="tiny" @click.stop="openEditItem(item)">
                     编辑
                   </NButton>
@@ -407,7 +420,12 @@ function handleLogout() {
               v-if="!group.items || group.items.length === 0"
               class="text-center text-gray-400 py-4 text-sm"
             >
-              暂无图标，点击"+ 添加"创建
+              <template v-if="authStore.isVisitMode">
+                暂无图标
+              </template>
+              <template v-else>
+                暂无图标，点击"+ 添加"创建
+              </template>
             </div>
           </div>
         </VueDraggable>
@@ -432,14 +450,6 @@ function handleLogout() {
           <label class="block text-sm mb-1">网址 *</label>
           <input
             v-model="editingItem.url"
-            class="w-full border rounded px-3 py-2 text-sm"
-            placeholder="https://"
-          />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">内网地址</label>
-          <input
-            v-model="editingItem.lanUrl"
             class="w-full border rounded px-3 py-2 text-sm"
             placeholder="https://"
           />
@@ -610,6 +620,7 @@ function handleLogout() {
             <div class="text-sm text-gray-500">{{ authStore.userInfo?.username }}</div>
             <div class="text-xs text-gray-400">
               角色: {{ authStore.userInfo?.role === 1 ? '管理员' : '普通用户' }}
+              <span v-if="authStore.isVisitMode" class="text-yellow-500 ml-1">(访客模式)</span>
             </div>
           </div>
         </div>
@@ -662,11 +673,12 @@ function handleLogout() {
             </NButton>
           </div>
         </div>
-
-        <NButton type="error" block @click="handleLogout">
-          退出登录
-        </NButton>
       </div>
+    </NModal>
+
+    <!-- ========== 用户管理弹窗 (管理员) ========== -->
+    <NModal v-model:show="usersManageShow" title="用户管理" preset="card" class="w-[700px]" :mask-closable="false">
+      <UsersManage />
     </NModal>
   </div>
 </template>

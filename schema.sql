@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS item_icons (
     icon_json TEXT DEFAULT '',           -- JSON: {itemType, src, text, backgroundColor}
     title TEXT NOT NULL DEFAULT '',
     url TEXT DEFAULT '',
-    lan_url TEXT DEFAULT '',
     description TEXT DEFAULT '',
     open_method INTEGER DEFAULT 0,       -- 打开方式
     sort INTEGER DEFAULT 0,

@@ -86,6 +86,15 @@ export function deleteUsers<T>(userIds: number[]) {
   return post<T>({ url: '/panel/users/deletes', data: { userIds } })
 }
 
+// ========== 公开访问用户 API (管理员) ==========
+export function getPublicVisitUser<T>() {
+  return post<T>({ url: '/panel/users/getPublicVisitUser' })
+}
+
+export function setPublicVisitUser<T>(userId: number | null) {
+  return post<T>({ url: '/panel/users/setPublicVisitUser', data: { userId } })
+}
+
 // ========== 系统设置 API ==========
 export function getSystemSetting<T>(configName: string) {
   return post<T>({ url: '/system/setting/get', data: { configName } })

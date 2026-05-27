@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
-import { authMiddleware, getAuthUser } from '../middleware/auth';
+import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
 import type { ApiResponse, ItemIconRequest, ItemIconRow, ItemIconSortRequest } from '../models/types';
 
 const panelApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
-panelApp.use('*', authMiddleware);
+panelApp.use('*', publicModeMiddleware);
 
 function formatIcon(row: ItemIconRow) {
   return {
@@ -13,7 +13,6 @@ function formatIcon(row: ItemIconRow) {
     icon: JSON.parse(row.icon_json || '{}'),
     title: row.title,
     url: row.url,
-    lanUrl: row.lan_url,
     description: row.description,
     openMethod: row.open_method,
     sort: row.sort,
@@ -38,7 +37,7 @@ panelApp.post('/itemIcon/addMultiple', async (c) => {
   }
 
   const stmt = db.prepare(
-    'INSERT INTO item_icons (icon_json, title, url, lan_url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   );
 
   const inserts = items.map(item =>
@@ -46,7 +45,6 @@ panelApp.post('/itemIcon/addMultiple', async (c) => {
       JSON.stringify(item.icon || {}),
       item.title,
       item.url,
-      item.lanUrl || '',
       item.description || '',
       item.openMethod || 0,
       item.sort || 0,
@@ -75,14 +73,13 @@ panelApp.post('/itemIcon/edit', async (c) => {
 
   if (body.id) {
     await db.prepare(
-      `UPDATE item_icons SET icon_json = ?, title = ?, url = ?, lan_url = ?, description = ?, 
+      `UPDATE item_icons SET icon_json = ?, title = ?, url = ?, description = ?, 
        open_method = ?, sort = ?, item_icon_group_id = ?, updated_at = datetime('now') 
        WHERE id = ? AND user_id = ?`
     ).bind(
       JSON.stringify(body.icon || {}),
       body.title,
       body.url,
-      body.lanUrl || '',
       body.description || '',
       body.openMethod || 0,
       body.sort || 0,
@@ -95,12 +92,11 @@ panelApp.post('/itemIcon/edit', async (c) => {
     return c.json({ code: 0, msg: 'ok', data: formatIcon(row as unknown as ItemIconRow) } satisfies ApiResponse);
   } else {
     const result = await db.prepare(
-      'INSERT INTO item_icons (icon_json, title, url, lan_url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       JSON.stringify(body.icon || {}),
       body.title,
       body.url,
-      body.lanUrl || '',
       body.description || '',
       body.openMethod || 0,
       body.sort || 0,

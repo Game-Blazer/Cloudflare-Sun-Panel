@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
-import { authMiddleware, adminMiddleware, getAuthUser } from '../middleware/auth';
+import { authMiddleware, adminMiddleware, publicModeMiddleware, getAuthUser } from '../middleware/auth';
 import { hashPassword } from '../utils/password';
 import type { ApiResponse, UserConfigRequest, UserConfigRow, UserRow, UserInfo, RegisterRequest } from '../models/types';
 
@@ -282,6 +282,74 @@ usersApp.post('/users/deletes', authMiddleware, adminMiddleware, async (c) => {
   await db.prepare(`DELETE FROM item_icon_groups WHERE user_id IN (${placeholders})`).bind(...filteredIds).run();
   await db.prepare(`DELETE FROM user_configs WHERE user_id IN (${placeholders})`).bind(...filteredIds).run();
   await db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).bind(...filteredIds).run();
+
+  return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+});
+
+// ========== 公开访问用户管理 (管理员) ==========
+
+/**
+ * 获取公开访问用户
+ * POST /api/panel/users/getPublicVisitUser
+ */
+usersApp.post('/users/getPublicVisitUser', authMiddleware, adminMiddleware, async (c) => {
+  const db = c.env.DB;
+
+  const setting = await db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'").first() as { config_value: string } | null;
+
+  const userId = setting?.config_value ? parseInt(setting.config_value, 10) : null;
+  if (!userId) {
+    return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+  }
+
+  const user = await db.prepare('SELECT id, username, name, head_image, role, status, mail, created_at FROM users WHERE id = ?').bind(userId).first() as unknown as UserRow | null;
+
+  if (!user) {
+    return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+  }
+
+  return c.json({
+    code: 0, msg: 'ok',
+    data: {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      headImage: user.head_image,
+      status: user.status,
+      role: user.role,
+      mail: user.mail,
+      created_at: user.created_at,
+    }
+  } satisfies ApiResponse);
+});
+
+/**
+ * 设置公开访问用户 (管理员)
+ * POST /api/panel/users/setPublicVisitUser
+ */
+usersApp.post('/users/setPublicVisitUser', authMiddleware, adminMiddleware, async (c) => {
+  const db = c.env.DB;
+  const { userId } = await c.req.json<{ userId: number | null }>();
+
+  if (userId === null || userId === undefined) {
+    // 取消公开访问
+    await db.prepare("DELETE FROM system_settings WHERE config_name = 'panel_public_user_id'").run();
+    return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+  }
+
+  // 检查用户是否存在
+  const user = await db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+  if (!user) {
+    return c.json({ code: 400, msg: '用户不存在', data: null } satisfies ApiResponse);
+  }
+
+  const existing = await db.prepare("SELECT id FROM system_settings WHERE config_name = 'panel_public_user_id'").first();
+
+  if (existing) {
+    await db.prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = 'panel_public_user_id'").bind(String(userId)).run();
+  } else {
+    await db.prepare("INSERT INTO system_settings (config_name, config_value) VALUES ('panel_public_user_id', ?)").bind(String(userId)).run();
+  }
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
 });

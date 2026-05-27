@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 const PANEL_KEY = 'sun-panel-state'
 
 export interface PanelState {
-  networkMode: 'wan' | 'lan'
   panelConfig: Panel.panelConfig
 }
 
@@ -30,7 +29,6 @@ const defaultPanelConfig: Panel.panelConfig = {
   systemMonitorShow: false,
   systemMonitorShowTitle: true,
   systemMonitorPublicVisitModeShow: false,
-  netModeChangeButtonShow: false,
 }
 
 export const usePanelState = defineStore('panel', {
@@ -38,17 +36,11 @@ export const usePanelState = defineStore('panel', {
     const saved = localStorage.getItem(PANEL_KEY)
     const parsed = saved ? JSON.parse(saved) : null
     return {
-      networkMode: parsed?.networkMode || 'wan',
       panelConfig: parsed?.panelConfig || { ...defaultPanelConfig },
     }
   },
 
   actions: {
-    setNetworkMode(mode: 'wan' | 'lan') {
-      this.networkMode = mode
-      this.save()
-    },
-
     setPanelConfig(config: Panel.panelConfig) {
       this.panelConfig = { ...defaultPanelConfig, ...config }
       this.save()
@@ -60,7 +52,6 @@ export const usePanelState = defineStore('panel', {
 
     save() {
       localStorage.setItem(PANEL_KEY, JSON.stringify({
-        networkMode: this.networkMode,
         panelConfig: this.panelConfig,
       }))
     },

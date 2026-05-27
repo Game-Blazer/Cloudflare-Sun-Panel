@@ -30,7 +30,6 @@ export interface ItemIconRow {
   icon_json: string;
   title: string;
   url: string;
-  lan_url: string;
   description: string;
   open_method: number;
   sort: number;
@@ -94,7 +93,6 @@ export interface ItemIconRequest {
   icon?: ItemIconInfo;
   title: string;
   url: string;
-  lanUrl?: string;
   description?: string;
   openMethod?: number;
   sort?: number;

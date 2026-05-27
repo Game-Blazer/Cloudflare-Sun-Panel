@@ -38,7 +38,6 @@ declare namespace Panel {
     title: string
     url: string
     sort?: number
-    lanUrl?: string
     description?: string
     openMethod: number
     itemIconGroupId?: number
@@ -88,7 +87,6 @@ declare namespace Panel {
     systemMonitorShow?: boolean
     systemMonitorShowTitle?: boolean
     systemMonitorPublicVisitModeShow?: boolean
-    netModeChangeButtonShow?: boolean
   }
 
   type PanelPanelConfigStyleEnum = 'text' | 'image' | 'detail'

@@ -3,8 +3,3 @@ export enum PanelPanelConfigStyleEnum {
   image = 'image',
   detail = 'detail',
 }
-
-export enum PanelStateNetworkModeEnum {
-  wan = 'wan',
-  lan = 'lan',
-}

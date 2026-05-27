@@ -2,25 +2,37 @@ import { defineStore } from 'pinia'
 
 const TOKEN_KEY = 'sun-panel-token'
 const USER_KEY = 'sun-panel-user'
+const VISIT_MODE_KEY = 'sun-panel-visit-mode'
+
+export enum VisitMode {
+  VISIT_MODE_LOGIN = 0,
+  VISIT_MODE_PUBLIC = 1,
+}
 
 export interface AuthState {
   token: string | null
   userInfo: User.Info | null
+  visitMode: VisitMode
 }
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => {
     const token = localStorage.getItem(TOKEN_KEY)
     const userStr = localStorage.getItem(USER_KEY)
+    const visitMode = Number(localStorage.getItem(VISIT_MODE_KEY)) || VisitMode.VISIT_MODE_LOGIN
+    const userInfo = userStr ? JSON.parse(userStr) : null
     return {
       token,
-      userInfo: userStr ? JSON.parse(userStr) : null,
+      userInfo,
+      visitMode,
     }
   },
 
   getters: {
     isLoggedIn: (state) => !!state.token,
     isAdmin: (state) => state.userInfo?.role === 1,
+    isVisitMode: (state) => state.visitMode === VisitMode.VISIT_MODE_PUBLIC,
+    isAuthenticated: (state) => !!state.token || state.visitMode === VisitMode.VISIT_MODE_PUBLIC,
   },
 
   actions: {
@@ -34,16 +46,45 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(USER_KEY, JSON.stringify(info))
     },
 
+    setVisitMode(mode: VisitMode) {
+      this.visitMode = mode
+      localStorage.setItem(VISIT_MODE_KEY, String(mode))
+    },
+
     loginSuccess(token: string, userInfo: User.Info) {
       this.setToken(token)
       this.setUserInfo(userInfo)
+      this.setVisitMode(VisitMode.VISIT_MODE_LOGIN)
+    },
+
+    setGuestMode(userInfo: User.Info | null) {
+      this.token = null
+      localStorage.removeItem(TOKEN_KEY)
+      this.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
+      if (userInfo) {
+        this.setUserInfo(userInfo)
+      }
+      // 尝试获取访客用户信息
+      if (!userInfo) {
+        // 从 about 接口获取公开模式状态
+        import('@/api/index').then(({ getAbout }) => {
+          getAbout<Record<string, string>>().then(res => {
+            if (res.code === 0 && res.data?.panel_public_user_id) {
+              // 有公开用户，设置 visitMode
+              this.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
+            }
+          })
+        })
+      }
     },
 
     removeToken() {
       this.token = null
       this.userInfo = null
+      this.visitMode = VisitMode.VISIT_MODE_LOGIN
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
+      localStorage.removeItem(VISIT_MODE_KEY)
     },
   },
 })

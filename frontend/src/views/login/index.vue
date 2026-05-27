@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NForm, NFormItem, NInput, NMessageProvider, useMessage } from 'naive-ui'
-import { login } from '@/api/index'
+import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
+import { login, getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
+import { VisitMode } from '@/store/modules/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -12,6 +13,17 @@ const message = useMessage()
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
+const hasPublicMode = ref(false)
+
+onMounted(async () => {
+  // 检查是否已启用公开模式
+  try {
+    const res = await getAbout<Record<string, string>>()
+    if (res.code === 0 && res.data?.panel_public_user_id) {
+      hasPublicMode.value = true
+    }
+  } catch { /* ignore */ }
+})
 
 async function handleLogin() {
   if (!username.value || !password.value) {
@@ -34,6 +46,14 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
+}
+
+async function handleSkipLogin() {
+  // 以访客模式进入
+  authStore.token = null
+  localStorage.removeItem('sun-panel-token')
+  authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
+  router.push('/')
 }
 </script>
 
@@ -77,6 +97,19 @@ async function handleLogin() {
           登录
         </NButton>
       </NForm>
+
+      <!-- 访客模式入口 -->
+      <template v-if="hasPublicMode" #footer>
+        <NDivider />
+        <NButton
+          block
+          size="large"
+          secondary
+          @click="handleSkipLogin"
+        >
+          以访客身份浏览
+        </NButton>
+      </template>
     </NCard>
   </div>
 </template>
