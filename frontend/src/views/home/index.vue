@@ -61,18 +61,6 @@ const starterShow = ref(false)
 const scrollContainerRef = ref<HTMLElement>()
 
 // ====== 样式 ======
-const backgroundStyle = computed(() => {
-  const config = panelState.panelConfig
-  const style: Record<string, string> = {}
-  if (config.backgroundImageSrc) {
-    style.backgroundImage = `url(${config.backgroundImageSrc})`
-    style.backgroundSize = 'cover'
-    style.backgroundPosition = 'center'
-    style.backgroundRepeat = 'no-repeat'
-  }
-  return style
-})
-
 const containerStyle = computed(() => {
   const config = panelState.panelConfig
   return {
@@ -245,11 +233,20 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container" :style="backgroundStyle">
-    <!-- 背景遮罩层 -->
-    <div v-if="panelState.panelConfig.backgroundImageSrc" class="absolute inset-0 bg-black/50 pointer-events-none"
-      :style="{ backdropFilter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`, opacity: panelState.panelConfig.backgroundMaskNumber ?? 0.3 }" />
+  <!-- 壁纸层 - 独立全屏背景图，blur 直接作用于图片（参照原项目） -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-0" :style="{
+    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
+    backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  }" />
+  <!-- 遮罩层 - 半透明黑色覆盖 -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-0" :style="{
+    backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
+  }" />
 
+  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container">
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" />
 

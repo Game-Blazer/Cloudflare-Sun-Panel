@@ -85,6 +85,8 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
       localStorage.removeItem(VISIT_MODE_KEY)
+      // 同时清除面板缓存，确保刷新后不会残留旧用户的壁纸配置
+      localStorage.removeItem('sun-panel-state')
     },
   },
 })
