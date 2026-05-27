@@ -34,6 +34,9 @@ onMounted(async () => {
     if (res.code === 0) {
       if (res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') {
         hasPublicMode.value = true
+        localStorage.setItem('sun-panel-public-mode', '1')
+      } else {
+        localStorage.setItem('sun-panel-public-mode', '0')
       }
       if (res.data?.site_title) {
         siteTitle.value = res.data.site_title

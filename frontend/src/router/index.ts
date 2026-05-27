@@ -31,10 +31,11 @@ export const router = createRouter({
   scrollBehavior: () => ({ left: 0, top: 0 }),
 })
 
-// 路由守卫（参照原项目：仅拦截非管理员访问 admin 路由）
-// 认证由后端 API 处理，未登录用户调用 API 会收到 401
+// 路由守卫：确保未认证且未开启公开模式时，只能访问登录页
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('sun-panel-token')
+  const visitMode = Number(localStorage.getItem('sun-panel-visit-mode')) || 0
+  const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
 
   // 已登录用户访问登录页，直接跳转首页
   if (to.name === 'login' && token) {
@@ -42,7 +43,14 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // 默认放行所有页面
+  // 首页需要认证：有 token 或 公开模式可用（访客模式）
+  if (to.name === 'Home') {
+    if (!token && !(visitMode === 1 && publicModeAvailable)) {
+      next({ name: 'login' })
+      return
+    }
+  }
+
   next()
 })
 
