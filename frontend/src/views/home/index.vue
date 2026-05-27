@@ -128,7 +128,7 @@ const containerStyle = computed(() => {
   }
 })
 
-const logoText = computed(() => panelState.panelConfig.logoText || 'Sun-Panel')
+const logoText = computed(() => panelState.panelConfig.logoText || '')
 
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
@@ -308,22 +308,23 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <!-- 顶部：Logo + 访客标识 -->
-    <div class="sticky top-0 z-20 flex justify-between items-center p-4">
+    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
         <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" />
-        <span class="text-white text-xl font-bold">{{ logoText }}</span>
+        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
-      <!-- 公告 -->
-      <Transition name="announce-fade">
-        <div v-if="announcementVisible && announcementText" class="announcement-box pointer-events-none">
-          <div class="flex items-start gap-3 max-w-sm pointer-events-auto bg-blue-600/90 text-white px-4 py-3 rounded-lg shadow-lg text-sm leading-relaxed">
-            <span class="flex-1">{{ announcementText }}</span>
-            <button @click="dismissAnnouncement" class="text-white/80 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
-          </div>
-        </div>
-      </Transition>
     </div>
+
+    <!-- 公告 -->
+    <Transition name="announce-fade">
+      <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
+        <div class="flex items-start gap-3 max-w-sm pointer-events-auto bg-white/15 backdrop-blur-lg text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
+          <span class="flex-1">{{ announcementText }}</span>
+          <button @click="dismissAnnouncement" class="text-white/60 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">

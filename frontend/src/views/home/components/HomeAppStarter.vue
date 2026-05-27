@@ -299,8 +299,8 @@ async function importData(data: ExportData) {
               <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">公告内容</label>
               <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="2" placeholder="公告文字，留空不显示" /></div>
-            <div><label class="block text-sm mb-1 font-medium">公告停留时间: {{ panelConfig.announcementDuration || 5 }} 秒 (0=不自动消失)</label>
-              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="range" min="0" max="30" class="w-full" /></div>
+            <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
+              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
               <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div><label class="block text-sm mb-1 font-medium">上边距</label>
