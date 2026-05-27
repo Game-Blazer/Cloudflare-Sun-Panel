@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NBackTop, NButton, NModal, NSpin, NTooltip, useMessage } from 'naive-ui'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { getGroupList } from '@/api/index'
@@ -60,6 +60,45 @@ function toggleEditMode(groupId: number) {
   editModeGroupId.value = editModeGroupId.value === groupId ? null : groupId
 }
 
+// ====== 公告 ======
+const announcementVisible = ref(false)
+let announcementTimer: ReturnType<typeof setTimeout> | null = null
+
+const announcementText = computed(() => panelState.panelConfig.announcement || '')
+const announcementDuration = computed(() => {
+  const d = panelState.panelConfig.announcementDuration
+  return d && d > 0 ? d : 5
+})
+
+function startAnnouncementTimer() {
+  clearAnnouncementTimer()
+  if (!announcementText.value) {
+    announcementVisible.value = false
+    return
+  }
+  announcementVisible.value = true
+  const dur = announcementDuration.value
+  if (dur > 0) {
+    announcementTimer = setTimeout(() => {
+      announcementVisible.value = false
+    }, dur * 1000)
+  }
+}
+
+function clearAnnouncementTimer() {
+  if (announcementTimer) { clearTimeout(announcementTimer); announcementTimer = null }
+}
+
+function dismissAnnouncement() {
+  clearAnnouncementTimer()
+  announcementVisible.value = false
+}
+
+// 监视公告配置变化
+watch([announcementText, announcementDuration], () => {
+  startAnnouncementTimer()
+})
+
 // AppStarter
 const starterShow = ref(false)
 
@@ -89,7 +128,7 @@ const containerStyle = computed(() => {
   }
 })
 
-const logoText = computed(() => siteConfig.value.logo_text || 'Sun-Panel')
+const logoText = computed(() => panelState.panelConfig.logoText || 'Sun-Panel')
 
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
@@ -195,6 +234,7 @@ onMounted(async () => {
   loadSiteConfig() // siteConfig 有本地缓存兜底，无需 await
   loadData()
   loadPanelConfig()
+  startAnnouncementTimer()
 })
 
 // ====== 图标编辑 ======
@@ -270,11 +310,19 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 顶部：Logo + 访客标识 -->
     <div class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
-        <img v-if="siteConfig.logo_image_src" :src="siteConfig.logo_image_src" class="h-8 rounded" alt="Logo" />
+        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" />
         <span class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
-      <div></div>
+      <!-- 公告 -->
+      <Transition name="announce-fade">
+        <div v-if="announcementVisible && announcementText" class="announcement-box pointer-events-none">
+          <div class="flex items-start gap-3 max-w-sm pointer-events-auto bg-blue-600/90 text-white px-4 py-3 rounded-lg shadow-lg text-sm leading-relaxed">
+            <span class="flex-1">{{ announcementText }}</span>
+            <button @click="dismissAnnouncement" class="text-white/80 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
+          </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- 主内容区域 -->
@@ -356,7 +404,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     </div>
 
     <!-- 自定义页脚 -->
-    <div v-if="siteConfig.footer_html" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="siteConfig.footer_html" />
+    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="panelState.panelConfig.footerHtml" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">
@@ -403,5 +451,14 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 <style scoped>
 .group-section:hover .group-title-btns {
   opacity: 1;
+}
+
+.announce-fade-enter-active,
+.announce-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.announce-fade-enter-from,
+.announce-fade-leave-to {
+  opacity: 0;
 }
 </style>

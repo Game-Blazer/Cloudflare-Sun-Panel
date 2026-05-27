@@ -26,6 +26,8 @@ const defaultPanelConfig: Panel.panelConfig = {
   maxWidthUnit: 'px',
   marginX: 20,
   footerHtml: '',
+  announcement: '',
+  announcementDuration: 5,
   systemMonitorShow: false,
   systemMonitorShowTitle: true,
   systemMonitorPublicVisitModeShow: false,

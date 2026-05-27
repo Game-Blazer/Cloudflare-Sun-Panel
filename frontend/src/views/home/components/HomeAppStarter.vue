@@ -96,9 +96,6 @@ async function handleSaveSiteSettings() {
     const res = await saveSiteSettings({
       site_title: localSiteConfig.value.site_title || '',
       login_bg_image: localSiteConfig.value.login_bg_image || '',
-      footer_html: localSiteConfig.value.footer_html || '',
-      logo_text: localSiteConfig.value.logo_text || '',
-      logo_image_src: localSiteConfig.value.logo_image_src || '',
       favicon_url: localSiteConfig.value.favicon_url || '',
     })
     if (res.code === 0) {
@@ -294,7 +291,17 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
               <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
-            <div><label class="block text-sm mb-1 font-medium">最大宽度</label>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">页头 Logo 文字</label>
+              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="Sun-Panel" /></div>
+            <div><label class="block text-sm mb-1 font-medium">页头 Logo 图片 URL</label>
+              <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL，显示在页面左上角" /></div>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
+              <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">公告内容</label>
+              <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="2" placeholder="公告文字，留空不显示" /></div>
+            <div><label class="block text-sm mb-1 font-medium">公告停留时间: {{ panelConfig.announcementDuration || 5 }} 秒 (0=不自动消失)</label>
+              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="range" min="0" max="30" class="w-full" /></div>
+            <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
               <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div><label class="block text-sm mb-1 font-medium">上边距</label>
               <input :value="panelConfig.marginTop" @input="(e: any) => panelConfig.marginTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
@@ -350,12 +357,6 @@ async function importData(data: ExportData) {
               <input :value="localSiteConfig.favicon_url" @input="(e: any) => localSiteConfig.favicon_url = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标URL，显示在浏览器标签页上" /></div>
             <div><label class="block text-sm mb-1 font-medium">登录页背景图片</label>
               <input :value="localSiteConfig.login_bg_image" @input="(e: any) => localSiteConfig.login_bg_image = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
-            <div><label class="block text-sm mb-1 font-medium">页头 Logo 文字</label>
-              <input :value="localSiteConfig.logo_text" @input="(e: any) => localSiteConfig.logo_text = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="Sun-Panel" /></div>
-            <div><label class="block text-sm mb-1 font-medium">页头 Logo 图片 URL</label>
-              <input :value="localSiteConfig.logo_image_src" @input="(e: any) => localSiteConfig.logo_image_src = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL，显示在页面左上角" /></div>
-            <div><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
-              <textarea :value="localSiteConfig.footer_html" @input="(e: any) => localSiteConfig.footer_html = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>© 2024 Sun-Panel</p>" /></div>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton type="primary" @click="handleSaveSiteSettings">保存</NButton>
             </div>

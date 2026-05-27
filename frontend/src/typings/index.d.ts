@@ -85,6 +85,8 @@ declare namespace Panel {
     maxWidthUnit?: string
     marginX?: number
     footerHtml?: string
+    announcement?: string
+    announcementDuration?: number
     systemMonitorShow?: boolean
     systemMonitorShowTitle?: boolean
     systemMonitorPublicVisitModeShow?: boolean
