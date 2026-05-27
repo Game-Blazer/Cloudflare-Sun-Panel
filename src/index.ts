@@ -14,6 +14,100 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+// ========== 数据库自动初始化 ==========
+let dbInitPromise: Promise<void> | null = null;
+
+async function initDatabase(db: D1Database): Promise<void> {
+  // 检查 users 表是否存在
+  const tableCheck = await db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+  ).first();
+
+  if (tableCheck) return; // 已初始化，跳过
+
+  const schemaSQL = [
+    `CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      name TEXT DEFAULT '',
+      head_image TEXT DEFAULT '',
+      status INTEGER DEFAULT 1,
+      role INTEGER DEFAULT 2,
+      mail TEXT DEFAULT '',
+      token TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS item_icon_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      icon TEXT DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      description TEXT DEFAULT '',
+      sort INTEGER DEFAULT 0,
+      public_visible INTEGER DEFAULT 1,
+      user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS item_icons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      icon_json TEXT DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      url TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      open_method INTEGER DEFAULT 0,
+      sort INTEGER DEFAULT 0,
+      item_icon_group_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (item_icon_group_id) REFERENCES item_icon_groups(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS user_configs (
+      user_id INTEGER PRIMARY KEY,
+      panel_json TEXT DEFAULT '{}',
+      search_engine_json TEXT DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      config_name TEXT NOT NULL UNIQUE,
+      config_value TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
+    `CREATE INDEX IF NOT EXISTS idx_users_token ON users(token)`,
+    `CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id)`,
+    // 默认管理员 (密码: admin123)
+    `INSERT OR IGNORE INTO users (id, username, password, name, role, status)
+     VALUES (1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1)`,
+  ];
+
+  // D1 batch 最多支持 100 条语句，这里只有 11 条，安全
+  await db.batch(schemaSQL.map(sql => db.prepare(sql)));
+  console.log('[DB] Database schema initialized successfully');
+}
+
+// 自动初始化中间件：首次请求时初始化数据库
+app.use('*', async (c, next) => {
+  if (!dbInitPromise) {
+    dbInitPromise = initDatabase(c.env.DB).catch((err) => {
+      console.error('[DB] Init failed:', err);
+      dbInitPromise = null; // 失败后重置，允许重试
+    });
+  }
+  await dbInitPromise;
+  await next();
+});
+
 // CORS 中间件
 app.use('*', corsMiddleware);
 
