@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NCheckbox, NForm, NFormItem, NInput, NModal, NPopover, NSpin, NSwitch, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NButtonGroup, NCheckbox, NForm, NFormItem, NInput, NModal, NPopover, NSpin, NSwitch, useMessage } from 'naive-ui'
 import { onMounted, ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useRouter } from 'vue-router'
@@ -8,7 +8,7 @@ import { VisitMode } from '@/store/modules/auth'
 import { getGroupList, saveGroup, deleteGroups, saveGroupSort } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getUserConfig, setUserConfig } from '@/api/index'
-import { getAbout, saveSiteSettings, login } from '@/api/index'
+import { getAbout, saveSiteSettings } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
 
 interface ItemGroup extends Panel.ItemIconGroup {
@@ -45,11 +45,8 @@ const editGroupModalVisible = ref(false)
 const settingModalShow = ref(false)
 const globalSettingModalShow = ref(false)
 
-// 用户 + 登录弹窗
+// 用户信息弹窗
 const userInfoModalShow = ref(false)
-const loginUsername = ref('')
-const loginPassword = ref('')
-const loginLoading = ref(false)
 
 // 用户管理弹窗
 const usersManageShow = ref(false)
@@ -82,7 +79,6 @@ const containerStyle = computed(() => {
 
 const logoText = computed(() => siteConfig.value.logo_text || panelState.panelConfig.logoText || 'Sun-Panel')
 
-// 访客可见的分组
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
   return groups.value.filter(g => g.publicVisible !== 0)
@@ -110,9 +106,7 @@ async function loadSiteConfig() {
         logo_image_src: res.data?.logo_image_src || '',
         default_guest_mode: res.data?.default_guest_mode || '',
       }
-      // 设置浏览器标签页标题
       document.title = siteConfig.value.site_title || 'Sun-Panel'
-      // 如果设置了默认访客模式，且当前没有 token 和 visitMode，自动设为访客
       if (res.data?.default_guest_mode === '1' && !authStore.token && !authStore.isVisitMode) {
         authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
       }
@@ -255,31 +249,7 @@ async function handleSaveGlobalSettings() {
 // ====== 登出 ======
 function handleLogout() {
   authStore.removeToken()
-  router.go(0) // 刷新页面
-}
-
-// ====== 访客登录 ======
-async function handleGuestLogin() {
-  if (!loginUsername.value || !loginPassword.value) {
-    message.warning('请输入用户名和密码')
-    return
-  }
-  loginLoading.value = true
-  try {
-    const res = await login<{ token: string; userInfo: User.Info }>(loginUsername.value, loginPassword.value)
-    if (res.code === 0) {
-      authStore.loginSuccess(res.data.token, res.data.userInfo)
-      message.success('登录成功')
-      userInfoModalShow.value = false
-      loginUsername.value = ''
-      loginPassword.value = ''
-      window.location.reload() // 硬刷新，确保 store 重新初始化
-    } else {
-      message.error(res.msg || '登录失败')
-    }
-  } catch (e: any) {
-    message.error(e?.msg || '网络错误')
-  } finally { loginLoading.value = false }
+  router.push('/login')
 }
 </script>
 
@@ -303,8 +273,13 @@ async function handleGuestLogin() {
           <NButton size="small" @click="groupModalShow = true">分组管理</NButton>
           <NButton size="small" @click="settingModalShow = true">风格设置</NButton>
         </template>
-        <NButton size="small" @click="userInfoModalShow = true">我的</NButton>
-        <NButton v-if="!authStore.isVisitMode" size="small" type="error" @click="handleLogout">退出</NButton>
+        <!-- 访客模式 → 登录按钮 -->
+        <NButton v-if="authStore.isVisitMode" size="small" type="primary" @click="router.push('/login')">登录</NButton>
+        <!-- 已登录 → 我的 + 退出 -->
+        <template v-if="!authStore.isVisitMode">
+          <NButton size="small" @click="userInfoModalShow = true">我的</NButton>
+          <NButton size="small" type="error" @click="handleLogout">退出</NButton>
+        </template>
       </div>
     </div>
 
@@ -350,6 +325,24 @@ async function handleGuestLogin() {
     <div v-if="siteConfig.footer_html" class="relative z-10 text-center py-4 text-gray-400 text-sm" v-html="siteConfig.footer_html" />
 
     <NBackTop :listen-to="() => scrollContainerRef" />
+
+    <!-- ========== 右下角浮动按钮 (参照原项目) ========== -->
+    <div class="fixed right-2.5 bottom-[50px] shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg overflow-hidden">
+      <NButtonGroup vertical>
+        <!-- 已登录：应用启动按钮 -->
+        <NButton v-if="!authStore.isVisitMode" color="#2a2a2a6b" @click="settingModalShow = !settingModalShow">
+          <template #icon>
+            <span class="text-white text-lg">⚙</span>
+          </template>
+        </NButton>
+        <!-- 访客模式：跳转登录按钮 -->
+        <NButton v-if="authStore.isVisitMode" color="#2a2a2a6b" title="登录" @click="router.push('/login')">
+          <template #icon>
+            <span class="text-white text-lg">👤</span>
+          </template>
+        </NButton>
+      </NButtonGroup>
+    </div>
 
     <!-- ========== 编辑图标弹窗 ========== -->
     <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
@@ -460,10 +453,9 @@ async function handleGuestLogin() {
       </div>
     </NModal>
 
-    <!-- ========== 用户信息/登录弹窗 ========== -->
-    <NModal v-model:show="userInfoModalShow" :title="authStore.isVisitMode ? '登录' : '我的信息'" preset="card" class="w-[400px]">
-      <!-- 已登录用户 -->
-      <div v-if="!authStore.isVisitMode" class="flex flex-col gap-4">
+    <!-- ========== 用户信息弹窗 (仅已登录) ========== -->
+    <NModal v-model:show="userInfoModalShow" title="我的信息" preset="card" class="w-[400px]">
+      <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded">
           <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
             {{ authStore.userInfo?.name?.charAt(0) || '?' }}
@@ -477,8 +469,8 @@ async function handleGuestLogin() {
         <div>
           <label class="block text-sm mb-1">主题</label>
           <div class="flex gap-2">
-            <NButton size="small" :type="appStore.theme === 'light' ? 'primary' : 'default'" @click="appStore.setTheme('light')">浅色</NButton>
             <NButton size="small" :type="appStore.theme === 'dark' ? 'primary' : 'default'" @click="appStore.setTheme('dark')">深色</NButton>
+            <NButton size="small" :type="appStore.theme === 'light' ? 'primary' : 'default'" @click="appStore.setTheme('light')">浅色</NButton>
             <NButton size="small" :type="appStore.theme === 'auto' ? 'primary' : 'default'" @click="appStore.setTheme('auto')">跟随系统</NButton>
           </div>
         </div>
@@ -489,18 +481,6 @@ async function handleGuestLogin() {
             <NButton size="small" :type="appStore.language === 'en-US' ? 'primary' : 'default'" @click="appStore.setLanguage('en-US')">English</NButton>
           </div>
         </div>
-      </div>
-      <!-- 访客登录表单 -->
-      <div v-else class="flex flex-col gap-4">
-        <div>
-          <label class="block text-sm mb-1">用户名</label>
-          <input v-model="loginUsername" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入用户名" :disabled="loginLoading" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">密码</label>
-          <input v-model="loginPassword" type="password" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入密码" :disabled="loginLoading" @keyup.enter="handleGuestLogin" />
-        </div>
-        <NButton type="primary" block :loading="loginLoading" @click="handleGuestLogin">登录</NButton>
       </div>
     </NModal>
 

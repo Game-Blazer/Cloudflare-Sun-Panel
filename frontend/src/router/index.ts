@@ -1,7 +1,6 @@
 import type { App } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { VisitMode } from '@/store/modules/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -32,23 +31,18 @@ export const router = createRouter({
   scrollBehavior: () => ({ left: 0, top: 0 }),
 })
 
-// 路由守卫：默认允许访问首页
-// 如果后端未配置公开模式且用户无 token，API 会返回 401 并被 axios 拦截器重定向到登录页
+// 路由守卫（参照原项目：仅拦截非管理员访问 admin 路由）
+// 认证由后端 API 处理，未登录用户调用 API 会收到 401
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('sun-panel-token')
-  const visitMode = Number(localStorage.getItem('sun-panel-visit-mode')) || VisitMode.VISIT_MODE_LOGIN
 
-  if (to.name === 'login') {
-    // 已登录或已是访客模式，直接跳转首页
-    if (token || visitMode === VisitMode.VISIT_MODE_PUBLIC) {
-      next({ name: 'Home' })
-      return
-    }
-    next()
+  // 已登录用户访问登录页，直接跳转首页
+  if (to.name === 'login' && token) {
+    next({ name: 'Home' })
     return
   }
 
-  // 默认放行所有页面，让后端 API 鉴权
+  // 默认放行所有页面
   next()
 })
 
