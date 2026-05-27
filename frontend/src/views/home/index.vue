@@ -24,7 +24,27 @@ const panelState = usePanelState()
 
 const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
-const siteConfig = ref<Panel.SiteConfig>({})
+const SITE_CACHE_KEY = 'sun-panel-site-config'
+
+// 先从 localStorage 恢复站点配置（避免闪烁）
+function loadCachedSiteConfig(): Panel.SiteConfig {
+  try {
+    const cached = localStorage.getItem(SITE_CACHE_KEY)
+    if (cached) return JSON.parse(cached) as Panel.SiteConfig
+  } catch { /* ignore */ }
+  return {}
+}
+
+const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
+const siteConfigLoaded = ref(false)
+
+// 立即用缓存值设置标题和图标
+if (siteConfig.value.site_title) {
+  document.title = siteConfig.value.site_title
+}
+if (siteConfig.value.favicon_url) {
+  updateFavicon(siteConfig.value.favicon_url)
+}
 
 // 编辑弹窗
 const editModalShow = ref(false)
@@ -108,6 +128,8 @@ async function loadSiteConfig() {
         logo_image_src: res.data?.logo_image_src || '',
         favicon_url: res.data?.favicon_url || '',
       }
+      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
+      siteConfigLoaded.value = true
       document.title = siteConfig.value.site_title || 'Sun-Panel'
       updateFavicon(siteConfig.value.favicon_url || '')
       if ((res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') && !authStore.token && !authStore.isVisitMode) {
@@ -204,6 +226,7 @@ async function saveItemSortOrder(group: ItemGroup) {
 function handleStarterSaved() { refreshAll() }
 function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   siteConfig.value = config
+  localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
   document.title = config.site_title || 'Sun-Panel'
   updateFavicon(config.favicon_url || '')
 }
