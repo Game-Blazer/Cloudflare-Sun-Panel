@@ -1,12 +1,16 @@
 /**
  * JWT 工具 - 使用 Web Crypto API
+ * 可通过环境变量 JWT_SECRET 或 wrangler secret 设置密钥
  */
 
-const JWT_SECRET_KEY = 'sun-panel-jwt-secret-key-change-in-production';
+function getSecretKey(): string {
+  // Cloudflare Workers: 通过全局变量或环境变量获取
+  return (typeof process !== 'undefined' && process.env?.JWT_SECRET) || 'sun-panel-jwt-secret-key-change-in-production';
+}
 
 async function getKey(): Promise<CryptoKey> {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(JWT_SECRET_KEY);
+  const keyData = encoder.encode(getSecretKey());
   return crypto.subtle.importKey(
     'raw',
     keyData,

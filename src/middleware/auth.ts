@@ -9,6 +9,13 @@ export interface AuthUser {
   visitMode: number; // 0=登录, 1=公开/访客
 }
 
+// ========== 辅助函数 ==========
+
+/** 获取 D1 数据库实例 */
+function getDB(c: Context): D1Database {
+  return (c.env as { DB: D1Database }).DB;
+}
+
 // ========== 登录鉴权中间件 ==========
 
 /**
@@ -47,7 +54,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
  */
 export async function publicModeMiddleware(c: Context, next: Next): Promise<Response | void> {
   const authHeader = c.req.header('Authorization');
-  const db = (c.env as unknown as { DB: D1Database }).DB;
+  const db = getDB(c);
 
   // 1. 优先尝试 JWT 登录
   if (authHeader) {

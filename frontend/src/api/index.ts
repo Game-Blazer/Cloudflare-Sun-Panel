@@ -35,8 +35,8 @@ export function editItem<T>(req: Panel.ItemInfo) {
   return post<T>({ url: '/panel/itemIcon/edit', data: req })
 }
 
-export function getItemsByGroup<T>(groupdId: number) {
-  return post<T>({ url: '/panel/itemIcon/getListByGroupId', data: { itemIconGroupId: groupdId } })
+export function getItemsByGroup<T>(groupId: number) {
+  return post<T>({ url: '/panel/itemIcon/getListByGroupId', data: { itemIconGroupId: groupId } })
 }
 
 export function deleteItems<T>(ids: number[]) {

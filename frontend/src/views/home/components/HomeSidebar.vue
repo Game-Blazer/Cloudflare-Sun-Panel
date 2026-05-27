@@ -3,11 +3,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store'
 
-interface GroupNavItem {
-  title: string
-  groupIndex: number
-}
-
 const props = defineProps<{
   groups: Array<{ title?: string; id?: number }>
 }>()

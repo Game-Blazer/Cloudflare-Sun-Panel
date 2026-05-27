@@ -124,7 +124,7 @@ function handleDone() {
 async function loadList() {
   tableIsLoading.value = true
   try {
-    const { data } = await getUserList<Common.ListResponse<User.Info[]>>(pagination.page, pagination.pageSize)
+    const { data } = await getUserList<Common.ListResponse<User.Info>>(pagination.page, pagination.pageSize)
     pagination.itemCount = data?.total || 0
     if (data?.list) userList.value = data.list
   } catch (e) {

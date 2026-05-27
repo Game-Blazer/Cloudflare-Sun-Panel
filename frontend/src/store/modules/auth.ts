@@ -64,18 +64,6 @@ export const useAuthStore = defineStore('auth', {
       if (userInfo) {
         this.setUserInfo(userInfo)
       }
-      // 尝试获取访客用户信息
-      if (!userInfo) {
-        // 从 about 接口获取公开模式状态
-        import('@/api/index').then(({ getAbout }) => {
-          getAbout<Record<string, string>>().then(res => {
-            if (res.code === 0 && res.data?.panel_public_user_id) {
-              // 有公开用户，设置 visitMode
-              this.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
-            }
-          })
-        })
-      }
     },
 
     removeToken() {

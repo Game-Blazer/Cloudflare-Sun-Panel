@@ -51,8 +51,7 @@ function http<T = any>(
   beforeRequest?.()
   method = method || 'GET'
 
-  const params = Object.assign(typeof data === 'function' ? data() : data ?? {}, {})
-  if (!headers) headers = {}
+  const params = data ?? {}
 
   return method === 'GET'
     ? request.get(url, { params, signal }).then(successHandler, failHandler)

@@ -141,6 +141,11 @@ function openAddGroup() {
   editGroupModalVisible.value = true
 }
 
+function handleLogout() {
+  authStore.removeToken()
+  window.location.reload()
+}
+
 // ====== 导入导出 ======
 const importExportLoading = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
@@ -279,7 +284,7 @@ async function importData(data: ExportData) {
               </div>
             </div>
             <div class="pt-2 border-t">
-              <NButton type="error" block @click="authStore.removeToken(); window.location.reload()">退出登录</NButton>
+              <NButton type="error" block @click="handleLogout">退出登录</NButton>
             </div>
           </div>
 

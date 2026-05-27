@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { FormInst, FormRules } from 'naive-ui'
 import { NButton, NForm, NFormItem, NInput, NModal, NSelect, useMessage } from 'naive-ui'
 import { createUser, updateUser } from '@/api/index'
@@ -52,8 +52,6 @@ const show = computed({
 
 const isEdit = computed(() => !!props.userInfo?.id)
 
-// 同步 userInfo 到 model
-import { watch } from 'vue'
 watch(() => props.visible, (val) => {
   if (val) {
     if (props.userInfo?.id) {

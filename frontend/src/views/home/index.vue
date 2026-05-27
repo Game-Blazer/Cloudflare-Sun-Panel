@@ -430,9 +430,9 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
         <div><label class="block text-sm mb-1">网址 *</label><input v-model="editingItem.url" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://" /></div>
         <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>
-        <div><label class="block text-sm mb-1">图标文字</label><input v-model="editingItem.icon.text" class="w-full border rounded px-3 py-2 text-sm" placeholder="图标显示文字" /></div>
-        <div><label class="block text-sm mb-1">图标图片 URL</label><input v-model="editingItem.icon.src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标图片URL，留空使用文字图标" /></div>
-        <div><label class="block text-sm mb-1">图标背景色</label><input v-model="editingItem.icon.backgroundColor" class="w-full border rounded px-3 py-2 text-sm" placeholder="#4a90d9" /></div>
+        <div><label class="block text-sm mb-1">图标文字</label><input v-model="editingItem.icon!.text" class="w-full border rounded px-3 py-2 text-sm" placeholder="图标显示文字" /></div>
+        <div><label class="block text-sm mb-1">图标图片 URL</label><input v-model="editingItem.icon!.src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标图片URL，留空使用文字图标" /></div>
+        <div><label class="block text-sm mb-1">图标背景色</label><input v-model="editingItem.icon!.backgroundColor" class="w-full border rounded px-3 py-2 text-sm" placeholder="#4a90d9" /></div>
         <div>
           <label class="block text-sm mb-1">打开方式</label>
           <select v-model="editingItem.openMethod" class="w-full border rounded px-3 py-2 text-sm">

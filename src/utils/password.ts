@@ -1,5 +1,5 @@
 /**
- * 密码工具 - 使用 Web Crypto API (PBKDF2)
+ * 密码工具 - 使用 Web Crypto API (SHA-256)
  */
 
 async function sha256(message: string): Promise<string> {
@@ -11,8 +11,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 /**
- * 对密码进行哈希处理
- * 使用双次 SHA-256 (兼容原项目 Go 版本的简单哈希方式)
+ * 对密码进行 SHA-256 哈希处理
  */
 export async function hashPassword(password: string): Promise<string> {
   return sha256(password);
