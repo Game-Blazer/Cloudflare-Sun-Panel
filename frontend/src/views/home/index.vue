@@ -364,7 +364,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                     loading="lazy"
                     decoding="async"
                     style="opacity:0;transition:opacity 0.3s ease"
-                    onload="this.style.opacity='1'"
+                    onload="this.style.opacity='1';this.parentElement.style.backgroundColor='transparent'"
                   />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
@@ -402,7 +402,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                         loading="lazy"
                         decoding="async"
                         style="opacity:0;transition:opacity 0.3s ease"
-                        onload="this.style.opacity='1'"
+                        onload="this.style.opacity='1';this.parentElement.style.backgroundColor='transparent'"
                       />
                       <span v-else class="text-white font-bold text-lg">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}
