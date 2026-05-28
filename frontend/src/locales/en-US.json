@@ -1,0 +1,105 @@
+{
+  "common": {
+    "appName": "Sun-Panel",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "title": "Title",
+    "description": "Description",
+    "icon": "Icon",
+    "url": "URL",
+    "action": "Action",
+    "saveSuccess": "Saved successfully",
+    "deleteSuccess": "Deleted successfully",
+    "addSuccess": "Added successfully",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "failed": "Operation failed",
+    "noData": "No data",
+    "username": "Username",
+    "password": "Password",
+    "nikeName": "Nickname",
+    "networkError": "Network error, please try again later",
+    "language": "Language",
+    "yes": "Yes",
+    "no": "No",
+    "reset": "Reset"
+  },
+  "login": {
+    "loginButton": "Login",
+    "passwordPlaceholder": "Password",
+    "usernamePlaceholder": "Username",
+    "welcomeMessage": "Welcome back!"
+  },
+  "api": {
+    "loginExpires": "Login expired, please login again"
+  },
+  "iconItem": {
+    "add": "Add Item",
+    "edit": "Edit Item",
+    "inputIconName": "Please enter icon name",
+    "url": "URL",
+    "lanUrl": "LAN URL",
+    "openMethod": "Open Method",
+    "currentPageOpen": "Current Page",
+    "newWindowOpen": "New Window",
+    "currentPageLayerOpen": "Modal Window",
+    "iconGroup": "Group",
+    "getGroupFail": "Failed to get group info",
+    "geticonFail": "Failed to get icon"
+  },
+  "panelHome": {
+    "changeToLanModel": "Switch to LAN mode",
+    "changeToWanModel": "Switch to WAN mode",
+    "goToLogin": "Go to Login"
+  },
+  "settingUserInfo": {
+    "logout": "Logout",
+    "confirmLogoutText": "Are you sure you want to logout?",
+    "updatePassword": "Change Password",
+    "oldPassword": "Old Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password"
+  },
+  "deskModule": {
+    "clock": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "searchBox": {
+      "inputPlaceholder": "Please enter search content",
+      "openWithNewOpen": "Open in new window"
+    }
+  },
+  "apps": {
+    "baseSettings": {
+      "appName": "Style Settings",
+      "wallpaper": "Wallpaper",
+      "vague": "Blur",
+      "mask": "Mask",
+      "contentArea": "Content Area",
+      "topMargin": "Top Margin",
+      "bottomMargin": "Bottom Margin",
+      "leftRightMargin": "Left/Right Margin",
+      "maxWidth": "Max Width",
+      "configSaved": "Configuration saved",
+      "resetWarnText": "Are you sure you want to reset these styles?"
+    },
+    "userInfo": {
+      "appName": "My Info",
+      "theme": "Theme",
+      "themeStyle": {
+        "light": "Light",
+        "dark": "Dark",
+        "auto": "System"
+      }
+    }
+  }
+}
