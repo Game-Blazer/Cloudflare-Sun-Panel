@@ -24,6 +24,7 @@
 - [回滚策略](#回滚策略)
 - [验证部署成功](#验证部署成功)
 - [默认账号](#默认账号)
+- [致谢](#致谢)
 
 ---
 
@@ -611,4 +612,4 @@ curl -X POST https://<your-worker>.workers.dev/about \
 
 本项目基于以下优秀项目构建，特别感谢：
 
-- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 原作者提供的优秀导航面板项目（v1.8.1），本项目为其 Cloudflare Workers 平台的适配版本。 
+- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 原作者提供的优秀导航面板项目，本项目为其 Cloudflare Workers 平台的适配版本。 
