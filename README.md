@@ -1,4 +1,4 @@
-# Sun-Panel
+# Cloudflare-Sun-Panel
 
 一个基于 Cloudflare Workers + D1 + Vue 3 的轻量级个人导航面板，支持多用户、图标分组管理、访客模式、主题切换等功能。
 
@@ -570,3 +570,8 @@ curl -X POST https://<your-worker>.workers.dev/about \
 - **CSS 框架**：Tailwind CSS 3.4
 - **状态管理**：Pinia 2.3
 - **国际化**：vue-i18n 9.14
+## 致谢
+
+本项目基于以下优秀项目构建，特别感谢：
+
+- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) 
