@@ -104,19 +104,6 @@ const starterShow = ref(false)
 
 const scrollContainerRef = ref<HTMLElement>()
 
-// ====== 样式 ======
-const backgroundStyle = computed(() => {
-  const config = panelState.panelConfig
-  const style: Record<string, string> = {}
-  if (config.backgroundImageSrc) {
-    style.backgroundImage = `url(${config.backgroundImageSrc})`
-    style.backgroundSize = 'cover'
-    style.backgroundPosition = 'center'
-    style.backgroundRepeat = 'no-repeat'
-  }
-  return style
-})
-
 const containerStyle = computed(() => {
   const config = panelState.panelConfig
   return {
@@ -288,16 +275,14 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <!-- 壁纸层 - filter blur 直接作用于背景图，GPU 加速 -->
+  <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-    backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
     transform: 'translateZ(0)',
     willChange: 'transform',
-  }" />
+  }">
+    <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
+  </div>
   <!-- 遮罩层 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
