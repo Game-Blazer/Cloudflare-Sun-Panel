@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NModal, NSpin, NTooltip, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
@@ -103,6 +103,13 @@ watch([announcementText, announcementDuration], () => {
 // AppStarter
 const starterShow = ref(false)
 
+// 弹窗（iframe 内嵌）
+const windowShow = ref(false)
+const windowSrc = ref('')
+const windowTitle = ref('')
+const windowIframeRef = ref(null)
+const windowIframeIsLoad = ref(false)
+
 const scrollContainerRef = ref<HTMLElement>()
 
 const containerStyle = computed(() => {
@@ -128,8 +135,18 @@ function openUrl(item: Panel.ItemInfo) {
   switch (item.openMethod) {
     case 1: window.location.href = url; break
     case 2: window.open(url, '_blank'); break
+    case 3:
+      windowShow.value = true
+      windowSrc.value = url
+      windowTitle.value = item.title || url
+      windowIframeIsLoad.value = true
+      break
     default: window.location.href = url
   }
+}
+
+function handWindowIframeIdLoad() {
+  windowIframeIsLoad.value = false
 }
 
 // ====== favicon ======
@@ -448,12 +465,38 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
           <select v-model="editingItem.openMethod" class="w-full border rounded px-3 py-2 text-sm">
             <option :value="1">当前页面打开</option>
             <option :value="2">新窗口打开</option>
+            <option :value="3">弹窗打开</option>
           </select>
         </div>
         <div class="flex justify-end gap-2">
           <NButton @click="editModalShow = false">取消</NButton>
           <NButton type="primary" @click="handleSaveItem">保存</NButton>
         </div>
+      </div>
+    </NModal>
+
+    <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
+    <NModal
+      v-model:show="windowShow" :mask-closable="false" preset="card"
+      class="max-w-[1000px] h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
+      aria-modal="true"
+    >
+      <template #header>
+        <div class="flex items-center">
+          <span class="mr-[20px]">{{ windowTitle }}</span>
+          <NSpin v-if="windowIframeIsLoad" size="small" />
+        </div>
+      </template>
+      <div class="w-full h-full rounded-2xl overflow-hidden border dark:border-zinc-700">
+        <div v-if="windowIframeIsLoad" class="flex flex-col p-5">
+          <NSkeleton height="50px" width="100%" class="rounded-lg" />
+          <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
+          <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
+        </div>
+        <iframe
+          v-show="!windowIframeIsLoad" id="windowIframeId" ref="windowIframeRef" :src="windowSrc"
+          class="w-full h-full" frameborder="0" @load="handWindowIframeIdLoad"
+        />
       </div>
     </NModal>
   </div>
