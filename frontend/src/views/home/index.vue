@@ -130,6 +130,18 @@ const glassVars = computed(() => ({
   '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
 }))
 
+function syncGlassVars() {
+  const blur = panelState.panelConfig.announcementBlur ?? 12
+  const opacity = panelState.panelConfig.announcementMaskOpacity ?? 0.15
+  document.documentElement.style.setProperty('--ann-blur', `${blur}px`)
+  document.documentElement.style.setProperty('--ann-opacity', `${opacity}`)
+}
+
+watch(
+  () => [panelState.panelConfig.announcementBlur, panelState.panelConfig.announcementMaskOpacity],
+  () => syncGlassVars()
+)
+
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
   return groups.value.filter(g => g.publicVisible !== 0)
@@ -239,6 +251,7 @@ function refreshAll() {
 }
 
 onMounted(async () => {
+  syncGlassVars()
   await updateLocalUserInfo()
   loadSiteConfig()
   loadData()
@@ -538,5 +551,21 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
   backdrop-filter: blur(var(--ann-blur, 12px));
   -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
+}
+</style>
+
+<style>
+.n-popover:not(.n-popover--no-glass) {
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
+  backdrop-filter: blur(var(--ann-blur, 12px)) !important;
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px)) !important;
+}
+
+.n-popover:not(.n-popover--no-glass) .n-popover__content {
+  background-color: transparent !important;
+}
+
+.n-popover:not(.n-popover--no-glass) .n-popover-arrow-wrapper .n-popover-arrow {
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
 }
 </style>
