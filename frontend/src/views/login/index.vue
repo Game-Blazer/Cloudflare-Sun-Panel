@@ -15,7 +15,7 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const hasPublicMode = ref(false)
-const siteTitle = ref('Sun-Panel')
+const siteTitle = ref('')
 const loginBgImage = ref('')
 
 const loginPageStyle = computed(() => {
@@ -96,7 +96,7 @@ async function handleSkipLogin() {
   >
     <NCard class="w-96 shadow-xl login-card" :bordered="false">
       <template #header>
-        <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
+        <div v-if="siteTitle" class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}
         </div>
       </template>

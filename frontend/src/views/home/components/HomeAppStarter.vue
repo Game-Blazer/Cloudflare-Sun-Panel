@@ -294,16 +294,6 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
               <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 文字</label>
-              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入 Logo 文字" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
-              <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL，显示在页面左上角" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
-              <input :value="panelConfig.logoPositionTop" @input="(e: any) => panelConfig.logoPositionTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
-              <input :value="panelConfig.logoPositionLeft" @input="(e: any) => panelConfig.logoPositionLeft = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
-              <input :value="panelConfig.logoSize" @input="(e: any) => panelConfig.logoSize = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
               <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
             <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
@@ -324,6 +314,11 @@ async function importData(data: ExportData) {
               <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="公告文字，留空不显示" /></div>
             <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
               <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div class="border-t pt-3">
+              <label class="block text-sm mb-1 font-medium">Logo 文字</label>
+              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入 Logo 文字" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
+              <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
             <div class="border-t pt-3">
               <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
               <input :value="panelConfig.announcementBlur" @input="(e: any) => panelConfig.announcementBlur = Number(e.target.value)" type="range" min="0" max="40" class="w-full" />

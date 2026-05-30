@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
@@ -139,15 +139,50 @@ const logoImageStyle = computed(() => {
   }
 })
 
+const logoHovered = ref(false)
+const logoEditMode = ref(false)
+const logoDragging = ref(false)
+let logoDragStart = { x: 0, y: 0 }
+let logoDragStartPos = { top: 0, left: 0 }
+
+function toggleLogoEdit() {
+  logoEditMode.value = !logoEditMode.value
+}
+
+function onLogoMouseDown(e: MouseEvent) {
+  if (!logoEditMode.value) return
+  logoDragging.value = true
+  logoDragStart = { x: e.clientX, y: e.clientY }
+  logoDragStartPos = {
+    top: panelState.panelConfig.logoPositionTop ?? 16,
+    left: panelState.panelConfig.logoPositionLeft ?? 16,
+  }
+  document.addEventListener('mousemove', onLogoMouseMove)
+  document.addEventListener('mouseup', onLogoMouseUp)
+}
+
+function onLogoMouseMove(e: MouseEvent) {
+  if (!logoDragging.value) return
+  panelState.panelConfig.logoPositionTop = Math.max(0, logoDragStartPos.top + (e.clientY - logoDragStart.y))
+  panelState.panelConfig.logoPositionLeft = Math.max(0, logoDragStartPos.left + (e.clientX - logoDragStart.x))
+}
+
+function onLogoMouseUp() {
+  logoDragging.value = false
+  document.removeEventListener('mousemove', onLogoMouseMove)
+  document.removeEventListener('mouseup', onLogoMouseUp)
+}
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', onLogoMouseMove)
+  document.removeEventListener('mouseup', onLogoMouseUp)
+})
+
 const wallpaperStyle = computed(() => {
   const src = panelState.panelConfig.backgroundImageSrc
   if (!src) return {}
   return {
-    backgroundImage: `url(${src})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    transform: 'translateZ(0)',
-    willChange: 'transform',
+    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
   }
 })
 
@@ -316,10 +351,15 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1] transition-opacity duration-700" :style="{
-    ...wallpaperStyle,
-    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-  }" />
+  <img
+    v-if="panelState.panelConfig.backgroundImageSrc"
+    :src="panelState.panelConfig.backgroundImageSrc"
+    class="fixed inset-0 z-[1] w-full h-full object-cover transition-opacity duration-700"
+    :style="wallpaperStyle"
+    fetchpriority="high"
+    decoding="sync"
+    alt=""
+  />
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
@@ -328,17 +368,30 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <div v-if="initDone && (panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc)"
-      class="fixed z-30 glass-logo"
-      :style="logoFloatStyle">
+      class="fixed z-30 glass-logo select-none"
+      :class="{ 'cursor-move ring-2 ring-blue-400/60': logoEditMode, 'cursor-default': !logoEditMode }"
+      :style="logoFloatStyle"
+      @mousedown="onLogoMouseDown"
+      @mouseenter="!authStore.isVisitMode && (logoHovered = true)"
+      @mouseleave="logoHovered = false">
+      <div
+        v-if="logoHovered && !authStore.isVisitMode"
+        class="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center cursor-pointer z-10 shadow-md transition-colors"
+        :class="{ '!bg-green-500 hover:!bg-green-600': logoEditMode }"
+        @click.stop="toggleLogoEdit"
+        @mousedown.stop
+      >
+        <span class="text-white text-[10px] leading-none">{{ logoEditMode ? '✓' : '✎' }}</span>
+      </div>
       <div class="flex items-center gap-3">
         <img
           v-if="panelState.panelConfig.logoImageSrc"
           :src="panelState.panelConfig.logoImageSrc"
           :style="logoImageStyle"
-          class="object-contain"
+          class="object-contain pointer-events-none"
           alt="Logo" decoding="async"
         />
-        <span v-if="logoText" class="text-white text-xl font-bold drop-shadow-lg">{{ logoText }}</span>
+        <span v-if="logoText" class="text-white text-xl font-bold drop-shadow-lg pointer-events-none">{{ logoText }}</span>
       </div>
     </div>
 
