@@ -36,7 +36,7 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
 
 const effectiveWallpaper = computed(() => {
-  return panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
+  return panelState.panelConfig.backgroundImageSrc || (initDone.value ? siteConfig.value.login_bg_image : '')
 })
 
 if (effectiveWallpaper.value) {
