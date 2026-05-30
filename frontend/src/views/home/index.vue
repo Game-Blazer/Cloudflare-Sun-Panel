@@ -36,7 +36,7 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
 
 const effectiveWallpaper = computed(() => {
-  return panelState.panelConfig.backgroundImageSrc || ''
+  return panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
 })
 
 if (effectiveWallpaper.value) {
@@ -355,7 +355,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 
 <template>
   <img
-    v-if="initDone && effectiveWallpaper"
+    v-if="effectiveWallpaper"
     :src="effectiveWallpaper"
     class="fixed inset-0 z-[1] w-full h-full object-cover transition-opacity duration-700"
     :style="wallpaperStyle"
@@ -363,7 +363,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     decoding="sync"
     alt=""
   />
-  <div v-if="initDone && effectiveWallpaper" class="fixed inset-0 z-[1]" :style="{
+  <div v-if="effectiveWallpaper" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
