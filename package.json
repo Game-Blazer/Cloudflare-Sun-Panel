@@ -9,6 +9,9 @@
     "db:init": "wrangler d1 execute sun-panel-db --file=./schema.sql",
     "db:init:local": "wrangler d1 execute sun-panel-db --file=./schema.sql --local"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "workerd", "sharp", "vue-demi"]
+  },
   "dependencies": {
     "hono": "^4.7.8",
     "zod": "^3.24.0"
