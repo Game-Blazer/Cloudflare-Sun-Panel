@@ -116,6 +116,23 @@ const containerStyle = computed(() => {
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
 
+const logoImageStyle = computed(() => ({
+  maxHeight: '48px',
+  maxWidth: '180px',
+}))
+
+const wallpaperStyle = computed(() => {
+  const src = panelState.panelConfig.backgroundImageSrc
+  if (!src) return {}
+  return {
+    backgroundImage: `url(${src})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+  }
+})
+
 const glassVars = computed(() => ({
   '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
   '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
@@ -211,6 +228,13 @@ onMounted(async () => {
   syncGlassVars()
   loadInitData()
   startAnnouncementTimer()
+  if (panelState.panelConfig.backgroundImageSrc) {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'image'
+    link.href = panelState.panelConfig.backgroundImageSrc
+    document.head.appendChild(link)
+  }
 })
 
 function openAddItem(groupId: number) {
@@ -281,13 +305,10 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1] transition-opacity duration-700" :style="{
+    ...wallpaperStyle,
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }">
-    <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
-  </div>
+  }" />
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
@@ -295,11 +316,17 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
-    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
-      <div class="flex items-center gap-3">
-        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" />
-        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
-        <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
+    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc"
+      class="sticky top-0 z-20 flex items-center p-4 logo-bar">
+      <div class="flex items-center gap-3 glass-logo">
+        <img
+          v-if="panelState.panelConfig.logoImageSrc"
+          :src="panelState.panelConfig.logoImageSrc"
+          :style="logoImageStyle"
+          class="object-contain"
+          alt="Logo" decoding="async"
+        />
+        <span v-if="logoText" class="text-white text-xl font-bold drop-shadow-lg">{{ logoText }}</span>
       </div>
     </div>
 
@@ -340,7 +367,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
                 <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'" />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -369,7 +396,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                   <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
                     <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'" />
                       <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                         :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -490,6 +517,21 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
   backdrop-filter: blur(var(--ann-blur, 12px));
   -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
+}
+
+.logo-bar {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.glass-logo {
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 </style>
 
