@@ -10,6 +10,7 @@ import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
+import HomeLogo from './components/HomeLogo.vue'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -127,8 +128,6 @@ const containerStyle = computed(() => {
     paddingRight: `${config.marginX || 20}px`,
   }
 })
-
-const logoText = computed(() => panelState.panelConfig.logoText || '')
 
 const glassVars = computed(() => ({
   '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
@@ -351,14 +350,8 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
-    <!-- 顶部：Logo + 访客标识 -->
-    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
-      <div class="flex items-center gap-3">
-        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" />
-        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
-        <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
-      </div>
-    </div>
+    <!-- Logo + 访客标识（独立固定定位组件） -->
+    <HomeLogo />
 
     <!-- 公告 -->
     <Transition name="announce-fade">
