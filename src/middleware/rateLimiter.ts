@@ -1,23 +1,12 @@
 import type { Context, Next } from 'hono'
 
+const MAX_STORE_SIZE = 1000
+
 export function createRateLimiter(options?: { maxRequests?: number; windowMs?: number }) {
   const maxRequests = options?.maxRequests ?? 10
   const windowMs = options?.windowMs ?? 60000
 
   const store = new Map<string, { count: number; resetTime: number }>()
-
-  const cleanup = () => {
-    const now = Date.now()
-    for (const [key, entry] of store) {
-      if (entry.resetTime <= now) {
-        store.delete(key)
-      }
-    }
-  }
-
-  const interval = setInterval(cleanup, windowMs)
-  // Allow garbage collection by not keeping a strong reference to the interval in closures
-  // (it's captured in a local variable that persists for the module lifetime, which is fine)
 
   return async (c: Context, next: Next) => {
     const ip =
@@ -41,6 +30,13 @@ export function createRateLimiter(options?: { maxRequests?: number; windowMs?: n
       c.header('Retry-After', String(retryAfter))
       c.status(429)
       return c.json({ code: 429, msg: 'Too many requests, please try again later', data: null })
+    }
+
+    // 惰性清理：当存储超过阈值时，清理所有过期条目
+    if (store.size > MAX_STORE_SIZE) {
+      for (const [key, e] of store) {
+        if (e.resetTime <= now) store.delete(key)
+      }
     }
 
     await next()

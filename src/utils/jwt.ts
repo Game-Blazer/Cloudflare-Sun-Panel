@@ -4,16 +4,11 @@
  */
 
 const DEFAULT_SECRET = 'sun-panel-jwt-secret-key-change-in-production'
-let secretWarned = false
 
 function getSecretKey(customSecret?: string): string {
   if (customSecret) return customSecret
-  const envSecret = (typeof process !== 'undefined' && process.env?.JWT_SECRET) || ''
-  if (envSecret) return envSecret
-
-  if (!secretWarned) {
-    secretWarned = true
-    console.warn('[SECURITY] JWT_SECRET not set. Set via: npx wrangler secret put JWT_SECRET')
+  if (typeof process !== 'undefined' && process.env?.JWT_SECRET) {
+    return process.env.JWT_SECRET
   }
   return DEFAULT_SECRET
 }
