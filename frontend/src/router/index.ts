@@ -6,17 +6,17 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('@/views/home/index.vue'),
+    component: () => import(/* home-page */ '@/views/home/index.vue'),
   },
   {
     path: '/login',
     name: 'login',
-    component: () => import('@/views/login/index.vue'),
+    component: () => import(/* login-page */ '@/views/login/index.vue'),
   },
   {
     path: '/404',
     name: '404',
-    component: () => import('@/views/exception/404/index.vue'),
+    component: () => import(/* notfound-page */ '@/views/exception/404/index.vue'),
   },
   {
     path: '/:pathMatch(.*)*',

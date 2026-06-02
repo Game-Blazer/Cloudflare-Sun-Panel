@@ -8,7 +8,7 @@ const defaultPanelConfig: Panel.panelConfig = {
   backgroundImageSrc: '',
   backgroundBlur: 0,
   backgroundMaskNumber: 0.3,
-  iconStyle: 'text' as any,
+  iconStyle: 'text' as Panel.PanelPanelConfigStyleEnum,
   iconTextColor: '#ffffff',
   iconTextInfoHideDescription: false,
   iconTextIconHideTitle: false,

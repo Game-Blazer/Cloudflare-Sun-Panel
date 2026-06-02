@@ -1,17 +1,12 @@
 import { post } from '@/utils/request'
 
-// ========== 统一初始化 API（替代 getAuthInfo + getAbout + getAllData） ==========
-export interface InitData {
-  user: User.Info | null
-  visitMode: number
-  siteConfig: Record<string, string>
-  groups: Panel.ItemIconGroup[]
-  itemsMap: Record<number, Panel.ItemInfo[]>
-  panelConfig: Panel.panelConfig
-}
-
-export function getInit<T = InitData>() {
-  return post<T>({ url: '/api/init' })
+interface UserFormData {
+  username: string
+  name: string
+  role: number
+  status: number
+  password?: string
+  id?: number
 }
 
 // ========== 认证 API ==========
@@ -97,11 +92,11 @@ export function getUserList<T>(page: number, pageSize: number) {
   return post<T>({ url: '/panel/users/getList', data: { page, pageSize } })
 }
 
-export function createUser<T>(data: any) {
+export function createUser<T>(data: UserFormData) {
   return post<T>({ url: '/panel/users/create', data })
 }
 
-export function updateUser<T>(data: any) {
+export function updateUser<T>(data: UserFormData) {
   return post<T>({ url: '/panel/users/update', data })
 }
 

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useMessage } from 'naive-ui'
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } from 'naive-ui'
+import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
+import { getAllData } from '@/api/index'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
-import { getSiteFavicon } from '@/api/index'
-import { getInit } from '@/api/index'
-import { invalidateCacheByPrefix } from '@/utils/requestCache'
+import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
+import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 
@@ -22,9 +22,9 @@ const panelState = usePanelState()
 
 const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
-const initDone = ref(false)
 const SITE_CACHE_KEY = 'sun-panel-site-config'
 
+// 先从 localStorage 恢复站点配置（避免闪烁）
 function loadCachedSiteConfig(): Panel.SiteConfig {
   try {
     const cached = localStorage.getItem(SITE_CACHE_KEY)
@@ -34,20 +34,9 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 }
 
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
+const siteConfigLoaded = ref(false)
 
-const effectiveWallpaper = computed(() => {
-  return panelState.panelConfig.backgroundImageSrc || (initDone.value ? siteConfig.value.login_bg_image : '')
-})
-
-if (effectiveWallpaper.value) {
-  const link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = effectiveWallpaper.value
-  link.setAttribute('fetchpriority', 'high')
-  document.head.appendChild(link)
-}
-
+// 立即用缓存值设置标题和图标
 if (siteConfig.value.site_title) {
   document.title = siteConfig.value.site_title
 }
@@ -55,21 +44,24 @@ if (siteConfig.value.favicon_url) {
   updateFavicon(siteConfig.value.favicon_url)
 }
 
+// 编辑弹窗
 const editModalShow = ref(false)
 const editingItem = ref<Panel.ItemInfo>({
   title: '', url: '', openMethod: 2,
   icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
   itemIconGroupId: undefined,
 })
-const editingGroupId = ref<number>()
+const editingGroupId = ref<number | undefined>()
 const getIconLoading = ref(false)
 
+// 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
 const editModeGroupId = ref<number | null>(null)
 
 function toggleEditMode(groupId: number) {
   editModeGroupId.value = editModeGroupId.value === groupId ? null : groupId
 }
 
+// ====== 公告 ======
 const announcementVisible = ref(false)
 let announcementTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -103,16 +95,19 @@ function dismissAnnouncement() {
   announcementVisible.value = false
 }
 
+// 监视公告配置变化
 watch([announcementText, announcementDuration], () => {
   startAnnouncementTimer()
 })
 
+// AppStarter
 const starterShow = ref(false)
 
+// 弹窗（iframe 内嵌）
 const windowShow = ref(false)
 const windowSrc = ref('')
 const windowTitle = ref('')
-const windowIframeRef = ref(null)
+const windowIframeRef = ref<HTMLElement | null>(null)
 const windowIframeIsLoad = ref(false)
 
 const scrollContainerRef = ref<HTMLElement>()
@@ -129,65 +124,6 @@ const containerStyle = computed(() => {
 })
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
-
-const logoFloatStyle = computed(() => ({
-  top: `${panelState.panelConfig.logoPositionTop ?? 16}px`,
-  left: `${panelState.panelConfig.logoPositionLeft ?? 16}px`,
-}))
-
-const logoImageStyle = computed(() => {
-  const size = panelState.panelConfig.logoSize ?? 48
-  return {
-    maxHeight: `${size}px`,
-    maxWidth: `${size * 3.75}px`,
-  }
-})
-
-const logoHovered = ref(false)
-const logoEditMode = ref(false)
-const logoDragging = ref(false)
-let logoDragStart = { x: 0, y: 0 }
-let logoDragStartPos = { top: 0, left: 0 }
-
-function toggleLogoEdit() {
-  logoEditMode.value = !logoEditMode.value
-}
-
-function onLogoMouseDown(e: MouseEvent) {
-  if (!logoEditMode.value) return
-  logoDragging.value = true
-  logoDragStart = { x: e.clientX, y: e.clientY }
-  logoDragStartPos = {
-    top: panelState.panelConfig.logoPositionTop ?? 16,
-    left: panelState.panelConfig.logoPositionLeft ?? 16,
-  }
-  document.addEventListener('mousemove', onLogoMouseMove)
-  document.addEventListener('mouseup', onLogoMouseUp)
-}
-
-function onLogoMouseMove(e: MouseEvent) {
-  if (!logoDragging.value) return
-  panelState.panelConfig.logoPositionTop = Math.max(0, logoDragStartPos.top + (e.clientY - logoDragStart.y))
-  panelState.panelConfig.logoPositionLeft = Math.max(0, logoDragStartPos.left + (e.clientX - logoDragStart.x))
-}
-
-function onLogoMouseUp() {
-  logoDragging.value = false
-  document.removeEventListener('mousemove', onLogoMouseMove)
-  document.removeEventListener('mouseup', onLogoMouseUp)
-}
-
-onUnmounted(() => {
-  document.removeEventListener('mousemove', onLogoMouseMove)
-  document.removeEventListener('mouseup', onLogoMouseUp)
-})
-
-const wallpaperStyle = computed(() => {
-  if (!effectiveWallpaper.value) return {}
-  return {
-    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-  }
-})
 
 const glassVars = computed(() => ({
   '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
@@ -230,6 +166,7 @@ function handWindowIframeIdLoad() {
   windowIframeIsLoad.value = false
 }
 
+// ====== favicon ======
 function updateFavicon(url: string) {
   let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null
   if (!url) {
@@ -244,24 +181,55 @@ function updateFavicon(url: string) {
   link.href = url
 }
 
-async function loadInitData() {
+// ====== 数据加载 ======
+
+/** 同步本地用户信息与认证状态 - 参照原项目 updateLocalUserInfo */
+interface AuthInfoResponse {
+  user: User.Info
+  visitMode: number
+}
+async function updateLocalUserInfo() {
+  try {
+    const res = await getAuthInfo<AuthInfoResponse>()
+    if (res.code === 0 && res.data) {
+      authStore.setUserInfo(res.data.user)
+      authStore.setVisitMode(res.data.visitMode)
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadSiteConfig() {
+  try {
+    const res = await getAbout<Record<string, string>>()
+    if (res.code === 0) {
+      siteConfig.value = {
+        site_title: res.data?.site_title || '',
+        login_bg_image: res.data?.login_bg_image || '',
+        footer_html: res.data?.footer_html || '',
+        logo_text: res.data?.logo_text || '',
+        logo_image_src: res.data?.logo_image_src || '',
+        favicon_url: res.data?.favicon_url || '',
+      }
+      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
+      siteConfigLoaded.value = true
+      document.title = siteConfig.value.site_title || 'Sun-Panel'
+      updateFavicon(siteConfig.value.favicon_url || '')
+    }
+  } catch { /* ignore */ }
+}
+
+/** 统一加载分组 + 图标 + 面板配置（一次 API 调用替代 N+1 次） */
+async function loadData() {
   loading.value = true
   try {
-    const res = await getInit()
+    const res = await cachedRequest('panel:allData', () => getAllData<{
+      groups: Panel.ItemIconGroup[]
+      itemsMap: Record<number, Panel.ItemInfo[]>
+      panelConfig: Panel.panelConfig
+    }>())
+
     if (res.code === 0 && res.data) {
-      const { user, visitMode, siteConfig: sc, groups: rawGroups, itemsMap, panelConfig } = res.data
-
-      if (user) {
-        authStore.setUserInfo(user)
-      }
-      authStore.setVisitMode(visitMode)
-
-      if (sc && typeof sc === 'object') {
-        Object.assign(siteConfig.value, sc)
-        localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(sc))
-        document.title = sc.site_title || 'Sun-Panel'
-        updateFavicon(sc.favicon_url || '')
-      }
+      const { groups: rawGroups, itemsMap, panelConfig } = res.data
 
       groups.value = (rawGroups || []).map(g => ({
         ...g, hoverStatus: false, sortStatus: false,
@@ -272,20 +240,25 @@ async function loadInitData() {
         panelState.updatePanelConfigFromCloud(panelConfig)
       }
     }
-  } catch (e) { console.error(e) } finally { loading.value = false; initDone.value = true }
+  } catch (e) { console.error(e) } finally { loading.value = false }
 }
 
 function refreshAll() {
   invalidateCacheByPrefix('panel:')
-  loadInitData()
+  updateLocalUserInfo().then(() => {
+    Promise.all([loadData(), loadSiteConfig()])
+  })
 }
 
 onMounted(async () => {
   syncGlassVars()
-  loadInitData()
+  await updateLocalUserInfo()
+  loadSiteConfig()
+  loadData()
   startAnnouncementTimer()
 })
 
+// ====== 图标编辑 ======
 function openAddItem(groupId: number) {
   editingItem.value = {
     title: '', url: '', description: '', openMethod: 2,
@@ -297,7 +270,7 @@ function openAddItem(groupId: number) {
 }
 
 function openEditItem(item: Panel.ItemInfo) {
-  editingItem.value = { ...item }
+  editingItem.value = { ...item, icon: item.icon || { itemType: 0, text: '', backgroundColor: '#4a90d9' } }
   editingGroupId.value = item.itemIconGroupId
   editModalShow.value = true
 }
@@ -307,7 +280,7 @@ async function handleSaveItem() {
   if (!item?.title) { message.warning('请输入标题'); return }
   try {
     const res = item.id ? await editItem<Panel.ItemInfo>(item) : await addItems<Panel.ItemInfo[]>([item])
-    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadInitData() }
+    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadData() }
     else message.error(res.msg || '保存失败')
   } catch { message.error('网络错误') }
 }
@@ -334,16 +307,18 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
   if (!item.id) return
   try {
     const res = await deleteItems([item.id])
-    if (res.code === 0) { message.success('删除成功'); invalidateCacheByPrefix('panel:'); await loadInitData() }
+    if (res.code === 0) { message.success('删除成功'); invalidateCacheByPrefix('panel:'); await loadData() }
     else message.error(res.msg || '删除失败')
   } catch { message.error('网络错误') }
 }
 
+// ====== 排序 ======
 async function saveItemSortOrder(group: ItemGroup) {
   const sortItems = (group.items || []).filter(g => g.id).map((item, i) => ({ id: item.id!, sort: i }))
   try { const res = await saveItemSort({ sortItems, itemIconGroupId: group.id! }); if (res.code === 0) message.success('排序已保存') } catch { /* ignore */ }
 }
 
+// ====== AppStarter 回调 ======
 function handleStarterSaved() { refreshAll() }
 function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   siteConfig.value = config
@@ -354,59 +329,46 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <img
-    v-if="effectiveWallpaper"
-    :src="effectiveWallpaper"
-    class="fixed inset-0 z-[1] w-full h-full object-cover transition-opacity duration-700"
-    :style="wallpaperStyle"
-    fetchpriority="high"
-    decoding="sync"
-    alt=""
-  />
-  <div v-if="effectiveWallpaper" class="fixed inset-0 z-[1]" :style="{
+  <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+  }">
+    <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
+  </div>
+  <!-- 遮罩层 -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
-  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :style="glassVars">
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
+    <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
-    <div v-if="initDone && (panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc)"
-      class="fixed z-30 glass-logo select-none"
-      :class="{ 'cursor-move ring-2 ring-blue-400/60': logoEditMode, 'cursor-default': !logoEditMode }"
-      :style="logoFloatStyle"
-      @mousedown="onLogoMouseDown"
-      @mouseenter="!authStore.isVisitMode && (logoHovered = true)"
-      @mouseleave="logoHovered = false">
-      <div
-        v-if="logoHovered && !authStore.isVisitMode"
-        class="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center cursor-pointer z-10 shadow-md transition-colors"
-        :class="{ '!bg-green-500 hover:!bg-green-600': logoEditMode }"
-        @click.stop="toggleLogoEdit"
-        @mousedown.stop
-      >
-        <span class="text-white text-[10px] leading-none">{{ logoEditMode ? '✓' : '✎' }}</span>
-      </div>
+    <!-- 顶部：Logo + 访客标识 -->
+    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
-        <img
-          v-if="panelState.panelConfig.logoImageSrc"
-          :src="panelState.panelConfig.logoImageSrc"
-          :style="logoImageStyle"
-          class="object-contain pointer-events-none"
-          alt="Logo" decoding="async"
-        />
-        <span v-if="logoText" class="text-white text-xl font-bold drop-shadow-lg pointer-events-none">{{ logoText }}</span>
+        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" width="32" height="32" />
+        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
+        <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
     </div>
 
+    <!-- 公告 -->
     <Transition name="announce-fade">
       <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
         <div class="flex items-start gap-3 max-w-sm pointer-events-auto glass-panel text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
+
+
+
           <span class="flex-1">{{ announcementText }}</span>
           <button @click="dismissAnnouncement" class="text-white/60 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
         </div>
       </div>
     </Transition>
 
+    <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
       <NSpin :show="loading">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
@@ -435,7 +397,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
                 <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'" />
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -463,16 +425,16 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 <template #trigger>
                   <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
-                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'" />
-                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
+                      <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                        <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
+                        <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                          :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                          {{ item.icon?.text || item.title?.charAt(0) || '?' }}
+                        </div>
                       </div>
+                      <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
                     </div>
-                    <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
-                  </div>
-                </template>
+                  </template>
                 <span>{{ item.description }}</span>
               </NTooltip>
             </div>
@@ -484,7 +446,8 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </NSpin>
     </div>
 
-    <div v-if="initDone && panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-sm" v-html="panelState.panelConfig.footerHtml" :style="{ color: 'rgba(255,255,255,0.85)' }" />
+    <!-- 自定义页脚 -->
+    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="panelState.panelConfig.footerHtml" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">
@@ -494,6 +457,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </div>
     </NBackTop>
 
+    <!-- ========== AppStarter 应用启动器 ========== -->
     <HomeAppStarter
       v-model:visible="starterShow"
       :site-config="siteConfig"
@@ -502,6 +466,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       @update:site-config="handleSiteConfigUpdate"
     />
 
+    <!-- ========== 编辑图标弹窗 ========== -->
     <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
       <div v-if="editingItem" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
@@ -531,6 +496,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </div>
     </NModal>
 
+    <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
     <NModal
       v-model:show="windowShow" :mask-closable="false" preset="card"
       class="max-w-[1000px] h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
@@ -562,11 +528,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   opacity: 1;
 }
 
-.group-section {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 200px;
-}
-
 .announce-fade-enter-active,
 .announce-fade-leave-active {
   transition: opacity 0.4s ease;
@@ -590,15 +551,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
   backdrop-filter: blur(var(--ann-blur, 12px));
   -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
-}
-
-.glass-logo {
-  padding: 6px 12px;
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
-  backdrop-filter: blur(var(--ann-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
 

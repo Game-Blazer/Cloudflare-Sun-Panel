@@ -1,53 +1,32 @@
-import { Hono } from 'hono'
-import type { D1Database } from '@cloudflare/workers-types'
-import type { z } from 'zod'
-import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
-import { PanelService } from '../services/PanelService'
-import { ok, fail } from '../utils/response'
-import {
-  validate, iconEditSchema, iconAddMultipleSchema,
-  idsSchema, faviconSchema, getListByGroupIdSchema, sortSchema,
-} from '../utils/validate'
+import { Hono } from 'hono';
+import type { D1Database } from '@cloudflare/workers-types';
+import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
+import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, faviconSchema, getListByGroupIdSchema } from '../utils/validate';
+import { PanelService } from '../services/PanelService';
+import { ok, fail } from '../utils/response';
 
-type Variables = { validatedBody: unknown }
+type Variables = {
+  validatedBody: unknown;
+};
 
-const panelApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>()
+const panelApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
 
-panelApp.use('*', publicModeMiddleware)
+panelApp.use('*', publicModeMiddleware);
 
-function isHttpUrl(url: string): boolean {
-  return /^(https?:\/\/|\/\/)/i.test(url)
-}
-
-const BLOCKED_NETWORKS = [
-  { prefix: '127.', mask: 8 },
-  { prefix: '10.', mask: 8 },
-  { prefix: '172.16.', mask: 12 },
-  { prefix: '192.168.', mask: 16 },
-  { prefix: '169.254.', mask: 16 },
-  { prefix: '0.', mask: 8 },
-]
-
-function isPrivateIP(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '[::1]') return true
-  for (const net of BLOCKED_NETWORKS) {
-    const prefixBytes = net.prefix.split('.').filter(B => B)
-    const hostBytes = hostname.split('.')
-    if (hostBytes.length < prefixBytes.length) continue
-    let match = true
-    for (let i = 0; i < prefixBytes.length; i++) {
-      if (prefixBytes[i] !== hostBytes[i]) { match = false; break }
-    }
-    if (match) return true
-  }
-  return false
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return '服务器错误';
 }
 
 function isValidUrl(urlStr: string): boolean {
   try {
     const url = new URL(urlStr)
     if (!['http:', 'https:'].includes(url.protocol)) return false
-    if (isPrivateIP(url.hostname)) return false
+    const hostname = url.hostname.toLowerCase()
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') return false
+    if (hostname.startsWith('10.') ||
+        hostname.startsWith('172.') && hostname.split('.')[1] >= '16' && hostname.split('.')[1] <= '31' ||
+        hostname.startsWith('192.168.')) return false
     return true
   } catch {
     return false
@@ -60,10 +39,15 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...options, signal: controller.signal })
+    const response = await fetch(url, { ...options, signal: controller.signal })
+    return response
   } finally {
     clearTimeout(timer)
   }
+}
+
+function isHttpUrl(url: string): boolean {
+  return /^(https?:\/\/|\/\/)/i.test(url);
 }
 
 async function getFaviconUrl(urlStr: string): Promise<string | null> {
@@ -82,98 +66,172 @@ async function getFaviconUrl(urlStr: string): Promise<string | null> {
       return null
     }
 
-    const html = await resp.text()
-    const linkRegex = /<link[^>]+rel=["']([^"']*\bicon\b[^"']*)["'][^>]*href=["']([^"']+)["'][^>]*>/gi
-    const hrefRegex = /<link[^>]+href=["']([^"']+)["'][^>]*rel=["']([^"']*\bicon\b[^"']*)["'][^>]*>/gi
+    const html = await resp.text();
+    const linkRegex = /<link[^>]+rel=["']([^"']*\bicon\b[^"']*)["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
+    const hrefRegex = /<link[^>]+href=["']([^"']+)["'][^>]*rel=["']([^"']*\bicon\b[^"']*)["'][^>]*>/gi;
 
-    const icons: string[] = []
+    let match;
+    const icons: string[] = [];
+
     for (const re of [linkRegex, hrefRegex]) {
-      let match
       while ((match = re.exec(html)) !== null) {
-        const href = re === linkRegex ? match[2] : match[1]
+        const href = re === linkRegex ? match[2] : match[1];
         if (href.match(/\.(ico|png|svg|jpg|jpeg|gif|webp)/i) || match[1]?.includes('icon')) {
-          icons.push(href)
+          icons.push(href);
         }
       }
     }
 
     for (const v of icons) {
-      if (isHttpUrl(v)) return v
-      const fullUrl = `${domain.protocol}//${domain.host}/${v.replace(/^\//, '')}`
-      return fullUrl
+      if (isHttpUrl(v)) return v;
+      const urlInfo = new URL(urlStr);
+      const fullUrl = `${urlInfo.protocol}//${urlInfo.host}/${v.replace(/^\//, '')}`;
+      return fullUrl;
     }
 
     const defaultFavicon = `${domain.protocol}//${domain.hostname}/favicon.ico`
     const checkResp = await fetchWithTimeout(defaultFavicon, { method: 'HEAD' })
     if (checkResp.ok) return defaultFavicon
 
-    return null
+    return null;
   } catch {
-    return null
+    return null;
   }
 }
 
+/**
+ * 统一获取全部数据（分组 + 所有图标 + 用户配置）
+ * POST /api/panel/getAllData
+ */
 panelApp.post('/getAllData', async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
+  try {
+    const user = getAuthUser(c);
+    const userId = user!.userId;
+    const service = new PanelService(c.env.DB);
+    const result = await service.getAllData(userId);
 
-  const data = await svc.getAllData(user.userId)
-  c.header('Cache-Control', 'public, max-age=30')
-  return ok(c, data)
-})
+    c.header('Cache-Control', 'public, max-age=30');
+    return ok(c, result);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
 
+/**
+ * 批量添加图标
+ * POST /api/panel/itemIcon/addMultiple
+ */
 panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
-  const items = c.get('validatedBody') as z.infer<typeof iconAddMultipleSchema>
+  try {
+    const user = getAuthUser(c);
+    const items = c.var.validatedBody as Array<{
+      icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string };
+      title: string; url: string; description?: string;
+      openMethod?: number; sort?: number; itemIconGroupId: number;
+    }>;
 
-  await svc.addMultipleIcons(items, user.userId)
-  return ok(c, null)
-})
+    const service = new PanelService(c.env.DB);
+    await service.addMultipleIcons(items, user!.userId);
+    return ok(c, null);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
 
+/**
+ * 编辑图标
+ * POST /api/panel/itemIcon/edit
+ */
 panelApp.post('/itemIcon/edit', validate(iconEditSchema), async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
-  const body = c.get('validatedBody') as z.infer<typeof iconEditSchema>
+  try {
+    const user = getAuthUser(c);
+    const body = c.var.validatedBody as {
+      id?: number; icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string };
+      title: string; url: string; description?: string;
+      openMethod?: number; sort?: number; itemIconGroupId: number;
+    };
 
-  const result = await svc.editIcon(body, user.userId)
-  return ok(c, result)
-})
+    const service = new PanelService(c.env.DB);
+    const result = await service.editIcon(body, user!.userId);
+    return ok(c, result);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
 
+/**
+ * 根据分组 ID 获取图标列表
+ * POST /api/panel/itemIcon/getListByGroupId
+ */
 panelApp.post('/itemIcon/getListByGroupId', validate(getListByGroupIdSchema), async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
-  const { itemIconGroupId } = c.get('validatedBody') as z.infer<typeof getListByGroupIdSchema>
+  try {
+    const user = getAuthUser(c);
+    const { itemIconGroupId } = c.var.validatedBody as { itemIconGroupId?: number };
 
-  const list = await svc.getIconsByGroupId(itemIconGroupId || 0, user.userId)
-  return ok(c, list)
-})
+    const service = new PanelService(c.env.DB);
+    const list = await service.getIconsByGroupId(itemIconGroupId || 0, user!.userId);
+    return ok(c, list);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
 
+/**
+ * 批量删除图标
+ * POST /api/panel/itemIcon/deletes
+ */
 panelApp.post('/itemIcon/deletes', validate(idsSchema), async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
-  const { ids } = c.get('validatedBody') as z.infer<typeof idsSchema>
+  try {
+    const user = getAuthUser(c);
+    const { ids } = c.var.validatedBody as { ids: number[] };
 
-  await svc.deleteIcons(ids, user.userId)
-  return ok(c, null)
-})
+    const service = new PanelService(c.env.DB);
+    await service.deleteIcons(ids, user!.userId);
+    return ok(c, null);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
 
+/**
+ * 保存图标排序
+ * POST /api/panel/itemIcon/saveSort
+ */
 panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
-  const svc = new PanelService(c.env.DB)
-  const user = getAuthUser(c)!
-  const { sortItems } = c.get('validatedBody') as z.infer<typeof sortSchema>
+  try {
+    const user = getAuthUser(c);
+    const { sortItems } = c.var.validatedBody as { sortItems: Array<{ id: number; sort: number }> };
 
-  await svc.saveIconSort(sortItems, user.userId)
-  return ok(c, null)
-})
+    if (sortItems.length === 0) {
+      return ok(c, null);
+    }
 
+    const service = new PanelService(c.env.DB);
+    await service.saveIconSort(sortItems, user!.userId);
+    return ok(c, null);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
+
+/**
+ * 获取网站 favicon 图标 URL
+ * POST /api/panel/itemIcon/getSiteFavicon
+ */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
-  const { url } = c.get('validatedBody') as z.infer<typeof faviconSchema>
+  try {
+    const { url } = c.var.validatedBody as { url: string };
 
-  const iconUrl = await getFaviconUrl(url)
-  if (!iconUrl) return fail(c, '获取图标失败', 1)
+    const iconUrl = await getFaviconUrl(url);
 
-  return ok(c, { iconUrl })
-})
+    if (!iconUrl) {
+      return fail(c, '获取图标失败', 1);
+    }
 
-export default panelApp
+    return ok(c, { iconUrl });
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
+
+export default panelApp;
