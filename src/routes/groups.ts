@@ -35,6 +35,7 @@ groupsApp.post('/itemIconGroup/edit', validate(iconGroupSchema), async (c) => {
 groupsApp.post('/itemIconGroup/deletes', validate(idsSchema), async (c) => {
   const svc = new PanelService(c.env.DB)
   const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const { ids } = c.get('validatedBody') as z.infer<typeof idsSchema>
 
   await svc.deleteGroups(ids, user.userId)
@@ -44,6 +45,7 @@ groupsApp.post('/itemIconGroup/deletes', validate(idsSchema), async (c) => {
 groupsApp.post('/itemIconGroup/saveSort', validate(sortSchema), async (c) => {
   const svc = new PanelService(c.env.DB)
   const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const { sortItems } = c.get('validatedBody') as z.infer<typeof sortSchema>
 
   await svc.saveGroupSort(sortItems, user.userId)

@@ -74,6 +74,7 @@ panelApp.post('/getAllData', async (c) => {
 panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c) => {
   try {
     const user = getAuthUser(c);
+    if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403);
     const items = c.var.validatedBody as Array<{
       icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string };
       title: string; url: string; description?: string;
@@ -95,6 +96,7 @@ panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c
 panelApp.post('/itemIcon/edit', validate(iconEditSchema), async (c) => {
   try {
     const user = getAuthUser(c);
+    if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403);
     const body = c.var.validatedBody as {
       id?: number; icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string };
       title: string; url: string; description?: string;
@@ -133,6 +135,7 @@ panelApp.post('/itemIcon/getListByGroupId', validate(getListByGroupIdSchema), as
 panelApp.post('/itemIcon/deletes', validate(idsSchema), async (c) => {
   try {
     const user = getAuthUser(c);
+    if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403);
     const { ids } = c.var.validatedBody as { ids: number[] };
 
     const service = new PanelService(c.env.DB);
@@ -150,6 +153,7 @@ panelApp.post('/itemIcon/deletes', validate(idsSchema), async (c) => {
 panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
   try {
     const user = getAuthUser(c);
+    if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403);
     const { sortItems } = c.var.validatedBody as { sortItems: Array<{ id: number; sort: number }> };
 
     if (sortItems.length === 0) {
