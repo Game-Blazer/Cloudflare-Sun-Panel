@@ -5,7 +5,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { getAllData } from '@/api/index'
-import { deleteItems, saveItemSort } from '@/api/index'
+import { deleteItems, saveItemSort, getSiteFavicon } from '@/api/index'
 import { getAbout, getAuthInfo } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import { useAnnouncement } from './composables/useAnnouncement'
@@ -239,18 +239,24 @@ onMounted(async () => {
 })
 
 // ====== 图标编辑 ======
-function getIconByUrl() {
+const getIconLoading = ref(false)
+
+async function getIconByUrl() {
   const url = editingItem.value.url
   if (!url) { message.warning('请先输入网址'); return }
+  getIconLoading.value = true
   try {
-    const parsed = new URL(url)
-    const faviconUrl = `${parsed.protocol}//${parsed.hostname}/favicon.ico`
-    if (editingItem.value.icon) {
-      editingItem.value.icon.src = faviconUrl
+    const res = await getSiteFavicon<{ iconUrl: string }>(url)
+    if (res.code === 0 && res.data && editingItem.value.icon) {
+      editingItem.value.icon.src = res.data.iconUrl
+      message.success('图标获取成功')
+    } else {
+      message.error(res.msg || '获取图标失败')
     }
-    message.success('已获取图标')
   } catch {
-    message.warning('网址格式不正确')
+    message.error('网络错误')
+  } finally {
+    getIconLoading.value = false
   }
 }
 
@@ -423,7 +429,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
           <label class="block text-sm mb-1">网址 *</label>
           <div class="flex gap-2">
             <input v-model="editingItem.url" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="https://" />
-            <NButton :disabled="!editingItem.url" @click="getIconByUrl">获取图标</NButton>
+            <NButton :disabled="!editingItem.url" :loading="getIconLoading" @click="getIconByUrl">获取图标</NButton>
           </div>
         </div>
         <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>

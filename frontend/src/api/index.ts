@@ -61,6 +61,10 @@ export function saveItemSort<T>(data: Panel.ItemIconSortRequest) {
   return post<T>({ url: '/panel/itemIcon/saveSort', data })
 }
 
+export function getSiteFavicon<T>(url: string) {
+  return post<T>({ url: '/panel/itemIcon/getSiteFavicon', data: { url } })
+}
+
 // ========== 用户配置 API ==========
 export function getUserConfig<T>() {
   return post<T>({ url: '/panel/userConfig/get' })

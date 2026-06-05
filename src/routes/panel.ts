@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
-import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, getListByGroupIdSchema } from '../utils/validate';
+import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, getListByGroupIdSchema, faviconSchema } from '../utils/validate';
 import { PanelService } from '../services/PanelService';
 import { ok, fail, getErrorMessage } from '../utils/response';
 
@@ -12,6 +12,47 @@ type Variables = {
 const panelApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
 
 panelApp.use('*', publicModeMiddleware);
+
+/** 校验 URL 是否合法（SSRF 防护） */
+function isValidUrl(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    if (!['http:', 'https:'].includes(url.protocol)) return false;
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') return false;
+
+    const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = hostname.match(ipv4Pattern);
+    if (match) {
+      const [, a, b, c, d] = match.map(Number);
+      if (a === 10) return false;
+      if (a === 172 && b >= 16 && b <= 31) return false;
+      if (a === 192 && b === 168) return false;
+      if (a === 127) return false;
+      if (a === 169 && b === 254) return false;
+      if (a === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 从 HTML 中解析 favicon 链接 */
+function parseFaviconFromHtml(html: string, baseUrl: string): string | null {
+  const regex = /<link[^>]*rel=["'](?:shortcut\s+)?icon["'][^>]*>/gi;
+  const match = html.match(regex);
+  if (!match) return null;
+
+  const hrefRegex = /href=["']([^"']+)["']/i;
+  for (const tag of match) {
+    const hrefMatch = tag.match(hrefRegex);
+    if (hrefMatch && hrefMatch[1]) {
+      return new URL(hrefMatch[1], baseUrl).href;
+    }
+  }
+  return null;
+}
 
 /**
  * 统一获取全部数据（分组 + 所有图标 + 用户配置）
@@ -127,6 +168,46 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
     const service = new PanelService(c.env.DB);
     await service.saveIconSort(sortItems, user!.userId);
     return ok(c, null);
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500);
+  }
+});
+
+/**
+ * 获取站点图标 (favicon)
+ * POST /api/panel/itemIcon/getSiteFavicon
+ */
+panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
+  try {
+    const { url } = c.var.validatedBody as { url: string };
+
+    if (!isValidUrl(url)) {
+      return fail(c, 'URL 不合法或包含内网地址', 400);
+    }
+
+    const parsedUrl = new URL(url);
+    const htmlRes = await fetch(parsedUrl.origin, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
+        'Accept': 'text/html',
+      },
+      redirect: 'follow',
+      cf: { cacheTtl: 3600 },
+    } as RequestInit);
+
+    if (!htmlRes.ok) {
+      // 降级: 默认 favicon.ico
+      return ok(c, { iconUrl: `${parsedUrl.origin}/favicon.ico` });
+    }
+
+    const html = await htmlRes.text();
+    let iconUrl = parseFaviconFromHtml(html, parsedUrl.origin);
+
+    if (!iconUrl) {
+      iconUrl = `${parsedUrl.origin}/favicon.ico`;
+    }
+
+    return ok(c, { iconUrl });
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);
   }
