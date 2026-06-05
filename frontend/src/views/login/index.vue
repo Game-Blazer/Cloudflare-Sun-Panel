@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NInput, useMessage, NDivider } from 'naive-ui'
+import { NCard, NInput, useMessage, NDivider } from 'naive-ui'
 import { login, getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
@@ -107,7 +107,16 @@ async function handleSkipLogin() {
           <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">密码</label>
           <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" />
         </div>
-        <NButton type="primary" block size="large" :loading="loading" attr-type="submit">登录</NButton>
+        <button
+          type="submit"
+          :disabled="loading"
+          class="login-btn w-full py-2.5 rounded-lg text-white font-medium text-base transition-colors"
+          :class="loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:opacity-80'"
+          style="background-color: #2080f0; touch-action: manipulation;"
+          @click="handleLogin"
+        >
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
       </form>
 
       <template v-if="hasPublicMode" #footer>
@@ -127,8 +136,9 @@ async function handleSkipLogin() {
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
-.login-card :deep(.n-button) {
-  touch-action: manipulation;
+.login-btn {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 :deep(.login-card .n-card-header) {

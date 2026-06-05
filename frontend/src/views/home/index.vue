@@ -319,14 +319,19 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
-    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }">
-    <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
-  </div>
+  <!-- 壁纸层 - 使用 CSS background-image 确保移动端可靠铺满 -->
+  <div
+    v-if="panelState.panelConfig.backgroundImageSrc"
+    class="fixed inset-0 z-[1]"
+    :style="{
+      backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
+      transform: 'translateZ(0)',
+    }"
+  />
   <!-- 遮罩层 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
