@@ -240,7 +240,18 @@ onMounted(async () => {
 
 // ====== 图标编辑 ======
 function getIconByUrl() {
-  message.warning('该功能暂不可用，请手动填写图标图片 URL')
+  const url = editingItem.value.url
+  if (!url) { message.warning('请先输入网址'); return }
+  try {
+    const { hostname } = new URL(url)
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+    if (editingItem.value.icon) {
+      editingItem.value.icon.src = faviconUrl
+    }
+    message.success('已获取图标')
+  } catch {
+    message.warning('网址格式不正确')
+  }
 }
 
 async function handleDeleteItem(item: Panel.ItemInfo) {
