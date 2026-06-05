@@ -205,6 +205,8 @@ async function loadSiteConfig() {
       siteConfig.value = {
         site_title: res.data?.site_title || '',
         login_bg_image: res.data?.login_bg_image || '',
+        login_blur: res.data?.login_blur !== undefined ? Number(res.data.login_blur) : 12,
+        login_mask_opacity: res.data?.login_mask_opacity !== undefined ? Number(res.data.login_mask_opacity) : 0.15,
         footer_html: res.data?.footer_html || '',
         logo_text: res.data?.logo_text || '',
         logo_image_src: res.data?.logo_image_src || '',

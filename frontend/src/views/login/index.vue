@@ -37,6 +37,17 @@ const loginPageStyle = computed(() => {
   return {}
 })
 
+// 登录卡片模糊度和遮罩不透明度
+const loginBlur = ref(12)
+const loginMaskOpacity = ref(0.15)
+
+const loginCardStyle = computed(() => {
+  return {
+    '--glass-blur': `${loginBlur.value}px`,
+    '--glass-bg-hover': `rgba(255, 255, 255, ${loginMaskOpacity.value})`,
+  } as Record<string, string>
+})
+
 // 立即预加载缓存的登录背景，在 Vue 挂载前触发浏览器下载
 if (cachedLoginBg) {
   const link = document.createElement('link')
@@ -94,6 +105,13 @@ onMounted(async () => {
         img.onerror = () => { /* 加载失败，保持渐变背景 */ }
         img.src = bgUrl
       }
+      // 读取登录卡片模糊度和遮罩不透明度设置
+      if (res.data?.login_blur !== undefined) {
+        loginBlur.value = Number(res.data.login_blur)
+      }
+      if (res.data?.login_mask_opacity !== undefined) {
+        loginMaskOpacity.value = Number(res.data.login_mask_opacity)
+      }
     }
   } catch { /* ignore */ }
 })
@@ -131,7 +149,7 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
     :style="loginPageStyle"
   >
-    <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false">
+    <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}

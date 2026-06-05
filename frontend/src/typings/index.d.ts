@@ -112,6 +112,8 @@ declare namespace Panel {
   interface SiteConfig {
     site_title?: string
     login_bg_image?: string
+    login_blur?: number
+    login_mask_opacity?: number
     footer_html?: string
     logo_text?: string
     logo_image_src?: string
