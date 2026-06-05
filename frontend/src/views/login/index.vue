@@ -15,7 +15,13 @@ const password = ref('')
 const loading = ref(false)
 const hasPublicMode = ref(false)
 const siteTitle = ref('Sun-Panel')
-const loginBgImage = ref('')
+
+// 缓存登录页背景 URL，用于下次访问时直接显示，避免渐变闪烁
+const LOGIN_BG_CACHE_KEY = 'sun-panel-login-bg'
+const cachedLoginBg = localStorage.getItem(LOGIN_BG_CACHE_KEY) || ''
+
+// 如果有缓存的背景 URL，立即显示，避免先显示渐变再切换
+const loginBgImage = ref(cachedLoginBg || '')
 
 const loginPageStyle = computed(() => {
   const bgImage = loginBgImage.value
@@ -31,10 +37,6 @@ const loginPageStyle = computed(() => {
   return {}
 })
 
-// 缓存登录页背景 URL，用于下次访问时提前预加载
-const LOGIN_BG_CACHE_KEY = 'sun-panel-login-bg'
-const cachedLoginBg = localStorage.getItem(LOGIN_BG_CACHE_KEY) || ''
-
 // 立即预加载缓存的登录背景，在 Vue 挂载前触发浏览器下载
 if (cachedLoginBg) {
   const link = document.createElement('link')
@@ -46,7 +48,6 @@ if (cachedLoginBg) {
 }
 
 function preloadLoginBg(url: string) {
-  // 移除旧预加载链接，添加新链接
   document.querySelector('link[data-login-bg]')?.remove()
   if (!url) return
   const link = document.createElement('link')
@@ -83,11 +84,11 @@ onMounted(async () => {
       // 使用站点设置中的登录页背景图片
       const bgUrl = res.data?.login_bg_image || ''
       if (bgUrl) {
-        // 缓存 URL 用于下次访问提前预加载
+        // 缓存 URL 用于下次访问
         localStorage.setItem(LOGIN_BG_CACHE_KEY, bgUrl)
         // 添加 <link rel="preload"> 提示浏览器提前下载
         preloadLoginBg(bgUrl)
-        // 用 Image 对象预加载，确保图片就绪后再切换背景
+        // 用 Image 对象预加载，确保图片就绪后再切换背景，避免闪烁
         const img = new Image()
         img.onload = () => { loginBgImage.value = bgUrl }
         img.onerror = () => { /* 加载失败，保持渐变背景 */ }
