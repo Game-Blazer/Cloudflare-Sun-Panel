@@ -18,6 +18,7 @@ interface App {
 interface ItemGroup {
   id?: number
   title: string
+  sort?: number
   items?: Panel.ItemInfo[]
   publicVisible?: number
   hoverStatus?: boolean
@@ -123,8 +124,8 @@ async function handleSaveSiteSettings() {
 }
 
 // ====== 分组管理 ======
-function openEditGroup(group: Panel.ItemIconGroup) {
-  editingGroup.value = { id: group.id, title: group.title, publicVisible: group.publicVisible ?? 1 }
+function openEditGroup(group: ItemGroup) {
+  editingGroup.value = { id: group.id, title: group.title, sort: group.sort, publicVisible: group.publicVisible ?? 1 }
   editGroupModalVisible.value = true
 }
 
@@ -136,7 +137,7 @@ async function handleSaveGroup() {
   } catch { message.error('网络错误') }
 }
 
-async function handleDeleteGroup(group: Panel.ItemIconGroup) {
+async function handleDeleteGroup(group: ItemGroup) {
   if (!group.id) return
   try {
     const res = await deleteGroups([group.id])

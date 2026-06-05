@@ -266,7 +266,11 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
 // ====== 排序 ======
 async function saveItemSortOrder(group: ItemGroup) {
   const sortItems = (group.items || []).filter(g => g.id).map((item, i) => ({ id: item.id!, sort: i }))
-  try { const res = await saveItemSort({ sortItems, itemIconGroupId: group.id! }); if (res.code === 0) message.success('排序已保存') } catch { /* ignore */ }
+  try {
+    const res = await saveItemSort({ sortItems, itemIconGroupId: group.id! })
+    if (res.code === 0) { message.success('排序已保存'); invalidateCacheByPrefix('panel:'); await loadData() }
+    else message.error(res.msg || '排序保存失败')
+  } catch { message.error('网络错误') }
 }
 
 // ====== AppStarter 回调 ======
