@@ -14,6 +14,8 @@ export interface AuthUser {
 let settingsCache: { publicUserId: string | null; guestMode: string | null; timestamp: number } | null = null
 const SETTINGS_CACHE_TTL = 60_000 // 60 秒
 
+let userInfoCache: { user: Record<string, unknown> | null; timestamp: number } | null = null
+
 // ========== 辅助函数 ==========
 
 /** 获取 D1 数据库实例 */
@@ -96,18 +98,24 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
   const guestModeValue = settingsCache.guestMode
 
   let targetUser: Record<string, unknown> | null = null
+  const cacheValid = userInfoCache && (now - userInfoCache.timestamp) < SETTINGS_CACHE_TTL
 
-  if (publicUserIdValue) {
-    const userId = parseInt(publicUserIdValue, 10)
-    if (!isNaN(userId)) {
+  if (cacheValid) {
+    targetUser = userInfoCache!.user
+  } else {
+    if (publicUserIdValue) {
+      const userId = parseInt(publicUserIdValue, 10)
+      if (!isNaN(userId)) {
+        targetUser = await db.prepare(
+          'SELECT id, username, name, head_image, role, status FROM users WHERE id = ?'
+        ).bind(userId).first() as Record<string, unknown> | null
+      }
+    } else if (guestModeValue === '1') {
       targetUser = await db.prepare(
-        'SELECT id, username, name, head_image, role, status FROM users WHERE id = ?'
-      ).bind(userId).first() as Record<string, unknown> | null
+        'SELECT id, username, name, head_image, role, status FROM users WHERE role = 1 LIMIT 1'
+      ).first() as Record<string, unknown> | null
     }
-  } else if (guestModeValue === '1') {
-    targetUser = await db.prepare(
-      'SELECT id, username, name, head_image, role, status FROM users WHERE role = 1 LIMIT 1'
-    ).first() as Record<string, unknown> | null
+    userInfoCache = { user: targetUser, timestamp: now }
   }
 
   if (targetUser) {

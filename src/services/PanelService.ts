@@ -91,7 +91,7 @@ export class PanelService {
         body.itemIconGroupId, body.id, userId
       ).run()
 
-      const row = await queryFirst<ItemIconRow>(this.db, 'SELECT * FROM item_icons WHERE id = ?', body.id)
+      const row = await queryFirst<ItemIconRow>(this.db, 'SELECT id, icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE id = ?', body.id)
       return this.formatIcon(row as ItemIconRow)
     } else {
       const result = await this.db.prepare(
@@ -103,14 +103,14 @@ export class PanelService {
       ).run()
 
       const row = await queryFirst<ItemIconRow>(this.db,
-        'SELECT * FROM item_icons WHERE id = ?', result.meta.last_row_id)
+        'SELECT id, icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE id = ?', result.meta.last_row_id)
       return this.formatIcon(row as ItemIconRow)
     }
   }
 
   async getIconsByGroupId(itemIconGroupId: number, userId: number) {
     return (await queryAll<ItemIconRow>(this.db,
-      'SELECT * FROM item_icons WHERE item_icon_group_id = ? AND user_id = ? ORDER BY sort ASC, id ASC',
+      'SELECT id, icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE item_icon_group_id = ? AND user_id = ? ORDER BY sort ASC, id ASC',
       itemIconGroupId, userId)).map(row => this.formatIcon(row))
   }
 
@@ -149,7 +149,7 @@ export class PanelService {
         body.sort || 0, body.publicVisible ?? 1, body.id, userId
       ).run()
 
-      const row = await queryFirst<ItemIconGroupRow>(this.db, 'SELECT * FROM item_icon_groups WHERE id = ?', body.id)
+      const row = await queryFirst<ItemIconGroupRow>(this.db, 'SELECT id, icon, title, description, sort, public_visible, user_id, created_at, updated_at FROM item_icon_groups WHERE id = ?', body.id)
       return this.formatGroup(row as ItemIconGroupRow)
     } else {
       const result = await this.db.prepare(
@@ -160,7 +160,7 @@ export class PanelService {
       ).run()
 
       const row = await queryFirst<ItemIconGroupRow>(this.db,
-        'SELECT * FROM item_icon_groups WHERE id = ?', result.meta.last_row_id)
+        'SELECT id, icon, title, description, sort, public_visible, user_id, created_at, updated_at FROM item_icon_groups WHERE id = ?', result.meta.last_row_id)
       return this.formatGroup(row as ItemIconGroupRow)
     }
   }

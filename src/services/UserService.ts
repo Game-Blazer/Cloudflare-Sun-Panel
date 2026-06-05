@@ -8,11 +8,11 @@ export class UserService {
   constructor(private db: D1Database) {}
 
   async findByUsername(username: string): Promise<UserRow | null> {
-    return queryFirst<UserRow>(this.db, 'SELECT * FROM users WHERE username = ?', username)
+    return queryFirst<UserRow>(this.db, 'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users WHERE username = ?', username)
   }
 
   async findById(id: number): Promise<UserRow | null> {
-    return queryFirst<UserRow>(this.db, 'SELECT * FROM users WHERE id = ?', id)
+    return queryFirst<UserRow>(this.db, 'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users WHERE id = ?', id)
   }
 
   async authenticate(username: string, password: string) {

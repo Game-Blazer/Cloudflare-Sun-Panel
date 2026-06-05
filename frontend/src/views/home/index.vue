@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
-import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData } from '@/api/index'
-import { deleteItems, saveItemSort, getSiteFavicon } from '@/api/index'
-import { getAbout, getAuthInfo } from '@/api/index'
+import { getAllData, deleteItems, saveItemSort, getAbout, getAuthInfo } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import { useAnnouncement } from './composables/useAnnouncement'
 import { useItemEditor } from './composables/useItemEditor'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 import HomeLogo from './components/HomeLogo.vue'
+import HomeWallpaper from './components/HomeWallpaper.vue'
+import HomeItemCard from './components/HomeItemCard.vue'
+import HomeEditIconModal from './components/HomeEditIconModal.vue'
+import HomeIframeModal from './components/HomeIframeModal.vue'
+import { useFavicon } from './composables/useFavicon'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -70,7 +73,6 @@ const starterShow = ref(false)
 const windowShow = ref(false)
 const windowSrc = ref('')
 const windowTitle = ref('')
-const windowIframeRef = ref(null)
 const windowIframeIsLoad = ref(false)
 
 const scrollContainerRef = ref<HTMLElement>()
@@ -238,36 +240,7 @@ onMounted(async () => {
 })
 
 // ====== 图标编辑 ======
-const getIconLoading = ref(false)
-const iconCandidates = ref<string[]>([])
-
-async function getIconByUrl() {
-  const url = editingItem.value.url
-  if (!url) { message.warning('请先输入网址'); return }
-  getIconLoading.value = true
-  iconCandidates.value = []
-  try {
-    const res = await getSiteFavicon<{ iconUrls: string[] }>(url)
-    if (res.code === 0 && res.data && res.data.iconUrls.length > 0) {
-      iconCandidates.value = res.data.iconUrls
-      message.success(`找到 ${iconCandidates.value.length} 个图标候选`)
-    } else {
-      message.error(res.msg || '获取图标失败')
-    }
-  } catch {
-    message.error('网络错误')
-  } finally {
-    getIconLoading.value = false
-  }
-}
-
-function selectIcon(iconUrl: string) {
-  if (editingItem.value.icon) {
-    editingItem.value.icon.src = iconUrl
-  }
-  iconCandidates.value = []
-  message.success('已选择图标')
-}
+const { getIconLoading, iconCandidates, getIconByUrl, selectIcon } = useFavicon()
 
 async function handleDeleteItem(item: Panel.ItemInfo) {
   if (!item.id) return
@@ -299,18 +272,11 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
-  <div v-if="effectiveBackgroundImage" class="fixed inset-0 z-[1]" :style="{
-    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }">
-    <img :src="effectiveBackgroundImage" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
-  </div>
-  <!-- 遮罩层 -->
-  <div v-if="effectiveBackgroundImage" class="fixed inset-0 z-[1]" :style="{
-    backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
-  }" />
+  <HomeWallpaper
+    :background-image-src="effectiveBackgroundImage"
+    :background-blur="panelState.panelConfig.backgroundBlur || 0"
+    :background-mask-number="panelState.panelConfig.backgroundMaskNumber ?? 0.3"
+  />
 
   <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container pt-14 sm:pt-0" :class="{ 'bg-gray-900': !effectiveBackgroundImage }" :style="glassVars">
     <!-- 侧边栏分组导航 -->
@@ -357,47 +323,20 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
               </div>
             </div>
             <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-2 sm:gap-3" @end="saveItemSortOrder(group)">
-              <div v-for="(item, ii) in group.items" :key="item.id || ii"
-                class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
-                @click="openUrl(item)">
-                <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
-                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                    :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                    {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                  </div>
-                </div>
-                <span class="text-white text-[11px] sm:text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
-                <div class="absolute top-1 right-1 flex gap-1">
-                  <NTooltip trigger="hover" placement="top">
-                    <template #trigger>
-                      <NButton size="tiny" @click.stop="openEditItem(item)" class="!px-2 !min-w-0">✎</NButton>
-                    </template>
-                    编辑
-                  </NTooltip>
-                  <NTooltip trigger="hover" placement="top">
-                    <template #trigger>
-                      <NButton size="tiny" type="error" @click.stop="handleDeleteItem(item)" class="!px-2 !min-w-0">✕</NButton>
-                    </template>
-                    删除
-                  </NTooltip>
-                </div>
-              </div>
+              <HomeItemCard
+                v-for="(item, ii) in group.items" :key="item.id || ii"
+                :item="item"
+                :editable="true"
+                :is-edit-mode="true"
+                @click="openUrl"
+                @edit="openEditItem"
+                @delete="handleDeleteItem"
+              />
             </VueDraggable>
             <div v-else class="flex flex-wrap gap-2 sm:gap-3">
               <NTooltip v-for="(item, ii) in group.items" :key="item.id || ii" trigger="hover" :disabled="!item.description" placement="bottom">
                 <template #trigger>
-                  <div class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
-                    @click="openUrl(item)">
-                    <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
-                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                      </div>
-                    </div>
-                    <span class="text-white text-[11px] sm:text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
-                  </div>
+                  <HomeItemCard :item="item" :editable="false" :is-edit-mode="false" @click="openUrl" />
                 </template>
                 <span>{{ item.description }}</span>
               </NTooltip>
@@ -431,74 +370,24 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     />
 
     <!-- ========== 编辑图标弹窗 ========== -->
-    <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[95vw] sm:w-[500px]">
-      <div v-if="editingItem" class="flex flex-col gap-4">
-        <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
-        <div>
-          <label class="block text-sm mb-1">网址 *</label>
-          <div class="flex gap-2">
-            <input v-model="editingItem.url" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="https://" />
-            <NButton :disabled="!editingItem.url" :loading="getIconLoading" @click="getIconByUrl">获取图标</NButton>
-          </div>
-          <!-- 图标候选列表 -->
-          <div v-if="iconCandidates.length > 0" class="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div class="text-xs text-gray-500 mb-2">点击选择图标：</div>
-            <div class="flex flex-wrap gap-2">
-              <div
-                v-for="(iconUrl, idx) in iconCandidates" :key="idx"
-                class="w-8 h-8 rounded cursor-pointer border-2 hover:border-blue-400 transition-colors flex items-center justify-center bg-white dark:bg-gray-700"
-                :class="editingItem.icon?.src === iconUrl ? 'border-blue-500' : 'border-gray-200 dark:border-gray-600'"
-                :title="iconUrl"
-                @click="selectIcon(iconUrl)"
-              >
-                <img :src="iconUrl" class="w-5 h-5 object-contain" alt="" @error="($event.target as HTMLImageElement).style.display='none'" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>
-        <div><label class="block text-sm mb-1">图标文字</label><input v-model="editingItem.icon!.text" class="w-full border rounded px-3 py-2 text-sm" placeholder="图标显示文字" /></div>
-        <div><label class="block text-sm mb-1">图标图片 URL</label><input v-model="editingItem.icon!.src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标图片URL，留空使用文字图标" /></div>
-        <div><label class="block text-sm mb-1">图标背景色</label><input v-model="editingItem.icon!.backgroundColor" class="w-full border rounded px-3 py-2 text-sm" placeholder="#4a90d9" /></div>
-        <div>
-          <label class="block text-sm mb-1">打开方式</label>
-          <select v-model="editingItem.openMethod" class="w-full border rounded px-3 py-2 text-sm">
-            <option :value="1">当前页面打开</option>
-            <option :value="2">新窗口打开</option>
-            <option :value="3">弹窗打开</option>
-          </select>
-        </div>
-        <div class="flex justify-end gap-2">
-          <NButton @click="editModalShow = false">取消</NButton>
-          <NButton type="primary" @click="handleSaveItem">保存</NButton>
-        </div>
-      </div>
-    </NModal>
+    <HomeEditIconModal
+      v-model:visible="editModalShow"
+      :editing-item="editingItem"
+      :get-icon-loading="getIconLoading"
+      :icon-candidates="iconCandidates"
+      @save="handleSaveItem"
+      @get-favicon="getIconByUrl(editingItem.url)"
+      @select-icon="(url: string) => selectIcon(url, editingItem)"
+    />
 
     <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
-    <NModal
-      v-model:show="windowShow" :mask-closable="false" preset="card"
-      class="max-w-[1000px] w-[95vw] h-[85vh] sm:h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
-      aria-modal="true"
-    >
-      <template #header>
-        <div class="flex items-center">
-          <span class="mr-[20px]">{{ windowTitle }}</span>
-          <NSpin v-if="windowIframeIsLoad" size="small" />
-        </div>
-      </template>
-      <div class="w-full h-full rounded-2xl overflow-hidden border dark:border-zinc-700">
-        <div v-if="windowIframeIsLoad" class="flex flex-col p-5">
-          <NSkeleton height="50px" width="100%" class="rounded-lg" />
-          <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
-          <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
-        </div>
-        <iframe
-          v-show="!windowIframeIsLoad" id="windowIframeId" ref="windowIframeRef" :src="windowSrc"
-          class="w-full h-full" frameborder="0" @load="handWindowIframeIdLoad"
-        />
-      </div>
-    </NModal>
+    <HomeIframeModal
+      v-model:visible="windowShow"
+      :src="windowSrc"
+      :title="windowTitle"
+      :is-loading="windowIframeIsLoad"
+      @loaded="handWindowIframeIdLoad"
+    />
   </div>
 </template>
 
@@ -521,22 +410,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 .announce-fade-enter-from,
 .announce-fade-leave-to {
   opacity: 0;
-}
-
-.glass-panel {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
-  backdrop-filter: blur(var(--ann-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
-}
-
-.glass-hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.glass-hover:hover {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
-  backdrop-filter: blur(var(--ann-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
 }
 </style>
 

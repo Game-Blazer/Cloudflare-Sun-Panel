@@ -20,7 +20,10 @@ export const useAuthStore = defineStore('auth', {
     const token = localStorage.getItem(TOKEN_KEY)
     const userStr = localStorage.getItem(USER_KEY)
     const visitMode = Number(localStorage.getItem(VISIT_MODE_KEY)) || VisitMode.VISIT_MODE_LOGIN
-    const userInfo = userStr ? JSON.parse(userStr) : null
+    let userInfo = null
+    if (userStr) {
+      try { userInfo = JSON.parse(userStr) } catch { userInfo = null }
+    }
     return {
       token,
       userInfo,

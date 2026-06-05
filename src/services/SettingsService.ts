@@ -52,7 +52,7 @@ export class SettingsService {
   }
 
   async getAll(): Promise<Record<string, string>> {
-    const rows = await queryAll<SystemSettingRow>(this.db, 'SELECT * FROM system_settings')
+    const rows = await queryAll<SystemSettingRow>(this.db, 'SELECT config_name, config_value FROM system_settings')
     const settings: Record<string, string> = {}
     for (const row of rows) {
       settings[row.config_name] = row.config_value

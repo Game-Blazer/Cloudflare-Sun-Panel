@@ -58,13 +58,44 @@ settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, va
 });
 
 /**
- * 获取所有设置 (公开)
+ * 获取所有设置 + 用户自定义壁纸 (公开)
  * POST /api/about
  */
 settingsApp.post('/about', async (c) => {
   try {
-    const service = new SettingsService(c.env.DB);
+    const db = c.env.DB;
+    const service = new SettingsService(db);
     const settings = await service.getAll();
+
+    // 检查公开模式：如果启用了公开模式，获取公开用户的自定义壁纸
+    const publicUserId = settings['panel_public_user_id'];
+    const guestMode = settings['default_guest_mode'];
+    if (publicUserId || guestMode === '1') {
+      let targetUserId: number | null = null;
+      if (publicUserId) {
+        targetUserId = parseInt(publicUserId, 10);
+      } else {
+        // 查找第一个管理员作为公开用户
+        const admin = await db.prepare(
+          'SELECT id FROM users WHERE role = 1 LIMIT 1'
+        ).first() as { id: number } | null;
+        targetUserId = admin?.id ?? null;
+      }
+      if (targetUserId) {
+        const row = await db.prepare(
+          'SELECT config_json FROM user_config WHERE user_id = ?'
+        ).bind(targetUserId).first() as { config_json: string } | null;
+        if (row?.config_json) {
+          try {
+            const config = JSON.parse(row.config_json);
+            if (config.panel?.backgroundImageSrc) {
+              settings['backgroundImageSrc'] = config.panel.backgroundImageSrc;
+            }
+          } catch { /* JSON 解析失败，忽略 */ }
+        }
+      }
+    }
+
     return ok(c, settings);
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);

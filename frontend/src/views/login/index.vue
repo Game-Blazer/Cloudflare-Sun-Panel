@@ -18,9 +18,11 @@ const siteTitle = ref('Sun-Panel')
 const loginBgImage = ref('')
 
 const loginPageStyle = computed(() => {
-  if (loginBgImage.value) {
+  // 优先使用风格设置中的自定义壁纸，否则使用站点设置的登录页背景
+  const bgImage = loginBgImage.value
+  if (bgImage) {
     return {
-      backgroundImage: `url(${loginBgImage.value})`,
+      backgroundImage: `url(${bgImage})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       transform: 'translateZ(0)',
@@ -53,7 +55,15 @@ onMounted(async () => {
         siteTitle.value = res.data.site_title
         document.title = res.data.site_title
       }
-      if (res.data?.login_bg_image) loginBgImage.value = res.data.login_bg_image
+      // 优先使用风格设置中的自定义壁纸，否则使用站点设置的登录页背景
+      const bgUrl = res.data?.backgroundImageSrc || res.data?.login_bg_image || ''
+      if (bgUrl) {
+        // 预加载壁纸图片，加载完成后才切换背景，避免闪烁
+        const img = new Image()
+        img.onload = () => { loginBgImage.value = bgUrl }
+        img.onerror = () => { /* 加载失败，保持渐变背景 */ }
+        img.src = bgUrl
+      }
     }
   } catch { /* ignore */ }
 })
@@ -118,11 +128,11 @@ async function handleSkipLogin() {
 
 <style scoped>
 .login-card {
-  background-color: rgba(255, 255, 255, 0.18) !important;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  background-color: var(--glass-bg-hover) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--glass-border) !important;
 }
 
 .login-card :deep(.n-button) {
