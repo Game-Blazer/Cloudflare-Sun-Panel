@@ -59,22 +59,32 @@ onMounted(async () => {
 })
 
 async function handleLogin() {
+  console.log('[Login] handleLogin called, username:', username.value, 'password length:', password.value.length)
   if (!username.value || !password.value) {
-    message.warning('请输入用户名和密码')
+    const msg = '请输入用户名和密码'
+    alert(msg)
+    message.warning(msg)
     return
   }
   loading.value = true
   try {
+    console.log('[Login] sending request...')
     const res = await login<{ token: string; userInfo: User.Info }>(username.value, password.value)
+    console.log('[Login] response:', res)
     if (res.code === 0) {
       authStore.loginSuccess(res.data.token, res.data.userInfo)
       message.success('登录成功')
       router.push('/')
     } else {
-      message.error(res.msg || '登录失败')
+      const msg = res.msg || '登录失败'
+      alert(msg)
+      message.error(msg)
     }
-  } catch {
-    message.error('网络错误，请稍后重试')
+  } catch (e) {
+    console.error('[Login] error:', e)
+    const msg = '网络错误，请稍后重试'
+    alert(msg)
+    message.error(msg)
   } finally { loading.value = false }
 }
 
@@ -111,9 +121,8 @@ async function handleSkipLogin() {
         :disabled="loading"
         class="login-btn w-full py-2.5 rounded-lg text-white font-medium text-base transition-colors"
         :class="loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:opacity-80'"
-        style="background-color: #2080f0; touch-action: manipulation;"
+        style="background-color: #2080f0; touch-action: manipulation; pointer-events: auto;"
         @click="handleLogin"
-        @touchstart.prevent
       >
         {{ loading ? '登录中...' : '登录' }}
       </button>
