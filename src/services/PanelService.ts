@@ -31,15 +31,15 @@ export class PanelService {
 
   async getAllData(userId: number) {
     const groups = await queryAll<ItemIconGroupRow>(this.db,
-      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC', userId)
+      'SELECT id, icon, title, description, sort, public_visible, user_id, created_at, updated_at FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC', userId)
 
     const groupIds = groups.map(g => g.id)
-    let itemsMap: Record<number, ReturnType<typeof this.formatIcon>[]> = {}
+    const itemsMap: Record<number, ReturnType<typeof this.formatIcon>[]> = {}
 
     if (groupIds.length > 0) {
       const placeholders = groupIds.map(() => '?').join(',')
       const iconRows = await queryAll<ItemIconRow>(this.db,
-        `SELECT * FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
+        `SELECT id, icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
         ...groupIds, userId)
 
       for (const row of iconRows) {
@@ -130,11 +130,10 @@ export class PanelService {
   }
 
   async getGroups(userId: number) {
-    const rows = await this.db.prepare(
-      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC'
-    ).bind(userId).all()
+    const rows = await queryAll<ItemIconGroupRow>(this.db,
+      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC', userId)
 
-    return (rows.results as unknown as ItemIconGroupRow[]).map(row => this.formatGroup(row))
+    return rows.map(row => this.formatGroup(row))
   }
 
   async editGroup(body: {

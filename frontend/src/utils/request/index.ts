@@ -7,7 +7,7 @@ let loginMessageShow = false
 
 export interface HttpOption {
   url: string
-  data?: any
+  data?: unknown
   method?: string
   headers?: any
   signal?: GenericAbortSignal
@@ -15,13 +15,13 @@ export interface HttpOption {
   afterRequest?: () => void
 }
 
-export interface Response<T = any> {
+export interface Response<T = unknown> {
   data: T
   msg: string
   code: number
 }
 
-function http<T = any>(
+function http<T = unknown>(
   { url, data, method, headers, signal, beforeRequest, afterRequest }: HttpOption,
 ) {
   const authStore = useAuthStore()
@@ -58,7 +58,7 @@ function http<T = any>(
     : request.post(url, params, { headers, signal }).then(successHandler, failHandler)
 }
 
-export function post<T = any>(opt: HttpOption): Promise<Response<T>> {
+export function post<T = unknown>(opt: HttpOption): Promise<Response<T>> {
   return http<T>({ ...opt, method: 'POST' })
 }
 

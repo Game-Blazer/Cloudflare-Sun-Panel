@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
-import { validate, settingGetSchema, settingSetSchema } from '../utils/validate';
+import { validate, settingGetSchema, settingSetSchema, saveAllSchema } from '../utils/validate';
 import { SettingsService } from '../services/SettingsService';
 import { ok, fail, getErrorMessage } from '../utils/response';
 
@@ -45,13 +45,9 @@ settingsApp.post('/system/setting/set', authMiddleware, adminMiddleware, validat
  * 批量保存系统设置 (管理员)
  * POST /api/system/settings/saveAll
  */
-settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, async (c) => {
+settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, validate(saveAllSchema), async (c) => {
   try {
-    const body = await c.req.json<Record<string, string>>();
-
-    if (!body || Object.keys(body).length === 0) {
-      return fail(c, '数据不能为空', 400);
-    }
+    const body = c.var.validatedBody as Record<string, string>;
 
     const service = new SettingsService(c.env.DB);
     await service.saveAll(body);

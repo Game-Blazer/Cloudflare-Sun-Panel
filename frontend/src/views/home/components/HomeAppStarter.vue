@@ -15,10 +15,19 @@ interface App {
   adminOnly?: boolean
 }
 
+interface ItemGroup {
+  id?: number
+  title: string
+  items?: Panel.ItemInfo[]
+  publicVisible?: number
+  hoverStatus?: boolean
+  sortStatus?: boolean
+}
+
 const props = defineProps<{
   visible: boolean
   siteConfig: Panel.SiteConfig
-  groups: any[]
+  groups: ItemGroup[]
   onSaved: () => void
 }>()
 

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
-import type { ApiResponse, UserInfo } from '../models/types';
+import type { UserInfo } from '../models/types';
 import { UserService } from '../services/UserService';
 import { validate, loginSchema, registerSchema } from '../utils/validate';
 import { ok, fail, getErrorMessage } from '../utils/response';
@@ -13,7 +13,6 @@ type Variables = {
 const authApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
 
 const loginLimiter = createRateLimiter({ maxRequests: 10, windowMs: 60000 });
-const registerLimiter = createRateLimiter({ maxRequests: 5, windowMs: 60000 });
 
 /**
  * 登录
@@ -40,7 +39,7 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
  * 注册
  * POST /api/register
  */
-authApp.post('/register', registerLimiter, validate(registerSchema), async (c) => {
+authApp.post('/register', validate(registerSchema), async (c) => {
   try {
     const body = c.get('validatedBody') as { username: string; password: string; name?: string; mail?: string };
     const userService = new UserService(c.env.DB);

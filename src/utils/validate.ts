@@ -26,7 +26,7 @@ export function validate(schema: ZodSchema) {
 
 export const loginSchema = z.object({
   username: z.string().min(1, '用户名不能为空').max(100),
-  password: z.string().min(0).max(128),
+  password: z.string().min(1, '密码不能为空').max(128),
 })
 
 export const registerSchema = z.object({
@@ -101,7 +101,7 @@ export const userPasswordSchema = z.object({
 
 export const userAdminCreateSchema = z.object({
   username: z.string().min(1).max(100),
-  password: z.string().max(128).optional().default(''),
+  password: z.string().min(6, '密码至少6位').max(128),
   name: z.string().max(50).optional(),
   role: z.number().int().min(1).max(2).optional(),
   status: z.number().int().min(0).max(1).optional(),
@@ -136,6 +136,8 @@ export const publicVisitUserSchema = z.object({
 export const getListByGroupIdSchema = z.object({
   itemIconGroupId: z.number().int().optional(),
 })
+
+export const saveAllSchema = z.record(z.string(), z.string())
 
 export const sortSchema = z.object({
   sortItems: z.array(z.object({

@@ -59,8 +59,17 @@ watch(() => props.visible, (val) => {
   }
 })
 
+interface UserSaveRequest {
+  username: string
+  name: string
+  role: number
+  status: number
+  password?: string
+  id?: number
+}
+
 async function handleSave() {
-  const req: any = {
+  const req: UserSaveRequest = {
     username: model.value.username,
     name: model.value.name || model.value.username,
     role: model.value.role,
