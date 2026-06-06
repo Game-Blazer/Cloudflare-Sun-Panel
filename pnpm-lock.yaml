@@ -89,7 +89,7 @@ importers:
         specifier: ^3.4.17
         version: 3.4.19
       typescript:
-        specifier: ^5.7.2
+        specifier: ^5.8.0
         version: 5.9.3
       unplugin-vue-components:
         specifier: ^32.1.0

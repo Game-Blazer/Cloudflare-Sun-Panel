@@ -4,6 +4,7 @@ import type { UserInfo } from '../models/types'
 import { UserService } from '../services/UserService'
 import { validate, loginSchema, registerSchema } from '../utils/validate'
 import { ok, fail, getErrorMessage } from '../utils/response'
+import { AppError } from '../utils/errors'
 import { createRateLimiter } from '../middleware/rateLimiter'
 
 type Variables = {
@@ -25,12 +26,11 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
 
     const result = await userService.authenticate(body.username, body.password)
 
-    if ('error' in result) {
-      return fail(c, result.error!)
-    }
-
     return ok(c, { token: result.token, userInfo: result.userInfo })
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -68,6 +68,9 @@ authApp.post('/register', validate(registerSchema), async (c) => {
 
     return ok(c, { token, userInfo })
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })

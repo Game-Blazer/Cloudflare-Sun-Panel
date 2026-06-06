@@ -4,10 +4,13 @@ import { NBackTop, NButton, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData, deleteItems, saveItemSort, getAbout, getAuthInfo, getInit } from '@/api/index'
-import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
+import { deleteItems, saveItemSort } from '@/api/index'
+import { invalidateCacheByPrefix } from '@/utils/requestCache'
 import { useAnnouncement } from './composables/useAnnouncement'
 import { useItemEditor } from './composables/useItemEditor'
+import { useSiteConfig, SITE_CACHE_KEY } from './composables/useSiteConfig'
+import { useWallpaper } from './composables/useWallpaper'
+import { useDataLoader, type ItemGroup } from './composables/useDataLoader'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 import HomeLogo from './components/HomeLogo.vue'
@@ -17,47 +20,36 @@ import HomeEditIconModal from './components/HomeEditIconModal.vue'
 import HomeIframeModal from './components/HomeIframeModal.vue'
 import { useFavicon } from './composables/useFavicon'
 
-interface ItemGroup extends Panel.ItemIconGroup {
-  hoverStatus?: boolean
-  items: Panel.ItemInfo[]
-  sortStatus?: boolean
-}
-
 const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
-
-const groups = ref<ItemGroup[]>([])
-const loading = ref(true)
-const SITE_CACHE_KEY = 'sun-panel-site-config'
-
-// 先从 localStorage 恢复站点配置（避免闪烁）
-function loadCachedSiteConfig(): Panel.SiteConfig {
-  try {
-    const cached = localStorage.getItem(SITE_CACHE_KEY)
-    if (cached) return JSON.parse(cached) as Panel.SiteConfig
-  } catch {
-    /* ignore */
-  }
-  return {}
-}
-
-const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
-const siteConfigLoaded = ref(false)
-
-// 立即用缓存值设置标题和图标
-if (siteConfig.value.site_title) {
-  document.title = siteConfig.value.site_title
-}
-if (siteConfig.value.favicon_url) {
-  updateFavicon(siteConfig.value.favicon_url)
-}
 
 const safeFooterHtml = computed(() => {
   return DOMPurify.sanitize(panelState.panelConfig.footerHtml || '')
 })
 
-// Composables
+// ---------- Composables ----------
+
+const { siteConfig, siteConfigLoaded, loadSiteConfig, handleSiteConfigUpdate, updateFavicon } = useSiteConfig()
+const { effectiveBackgroundImage, syncEffectiveWallpaper, preloadIconImages } = useWallpaper(siteConfig, panelState)
+
+function applySiteConfigToDom(config: Panel.SiteConfig) {
+  localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
+  siteConfigLoaded.value = true
+  document.title = config.site_title || 'Sun-Panel'
+  updateFavicon(config.favicon_url || '')
+}
+
+const { groups, loading, visibleGroups, loadData, loadInitData, refreshAll } = useDataLoader({
+  authStore,
+  panelState,
+  siteConfig,
+  syncWallpaper: syncEffectiveWallpaper,
+  preloadIcons: preloadIconImages,
+  onSiteConfigUpdated: applySiteConfigToDom,
+  loadSiteConfig,
+})
+
 const { announcementVisible, announcementText, startAnnouncementTimer, dismissAnnouncement } = useAnnouncement()
 const { editModalShow, editingItem, openAddItem, openEditItem, handleSaveItem } = useItemEditor(loadData)
 
@@ -107,70 +99,6 @@ watch(
   () => syncGlassVars(),
 )
 
-// Wallpaper - 使用 ref 避免 loadSiteConfig 中途触发壁纸切换闪烁
-const WALLPAPER_CACHE_KEY = 'sun-panel-effective-wallpaper'
-const effectiveBackgroundImage = ref(localStorage.getItem(WALLPAPER_CACHE_KEY) || '')
-
-// 立即预加载缓存的壁纸，在 Vue 挂载前就触发浏览器下载，加速首屏渲染
-if (effectiveBackgroundImage.value) {
-  preloadBackgroundImage(effectiveBackgroundImage.value)
-}
-
-function syncEffectiveWallpaper() {
-  const url = panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
-  if (url !== effectiveBackgroundImage.value) {
-    effectiveBackgroundImage.value = url
-  }
-  if (url) {
-    localStorage.setItem(WALLPAPER_CACHE_KEY, url)
-  }
-}
-
-function preloadBackgroundImage(url: string) {
-  let link = document.querySelector('link[rel="preload"][as="image"][data-wallpaper]') as HTMLLinkElement | null
-  // 如果同一 URL 已预加载，跳过
-  if (link && link.href === url) return
-  link?.remove()
-  if (!url) return
-  link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = url
-  link.setAttribute('data-wallpaper', 'true')
-  document.head.appendChild(link)
-}
-
-/** 预加载首屏图标（前 N 个有图标的图标），加速首屏渲染 */
-function preloadIconImages(groups: ItemGroup[], count: number = 6) {
-  let loaded = 0
-  for (const group of groups) {
-    for (const item of group.items || []) {
-      if (loaded >= count) return
-      if (!item.icon?.src) continue
-      const link = document.createElement('link')
-      link.rel = 'preload'
-      link.as = 'image'
-      link.href = item.icon.src
-      link.setAttribute('data-icon-preload', 'true')
-      document.head.appendChild(link)
-      loaded++
-    }
-  }
-}
-
-watch(
-  effectiveBackgroundImage,
-  (url) => {
-    preloadBackgroundImage(url)
-  },
-  { immediate: true },
-)
-
-const visibleGroups = computed(() => {
-  if (!authStore.isVisitMode) return groups.value
-  return groups.value.filter((g) => g.publicVisible !== 0)
-})
-
 function openUrl(item: Panel.ItemInfo) {
   let url = item.url
   switch (item.openMethod) {
@@ -196,182 +124,6 @@ function handWindowIframeIdLoad() {
 }
 
 // ====== favicon ======
-function updateFavicon(url: string) {
-  let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null
-  if (!url) {
-    if (link) link.remove()
-    return
-  }
-  if (!link) {
-    link = document.createElement('link')
-    link.rel = 'icon'
-    document.head.appendChild(link)
-  }
-  link.href = url
-  link.setAttribute('fetchpriority', 'low')
-}
-
-// ====== 数据加载 ======
-
-/** 同步本地用户信息与认证状态 - 参照原项目 updateLocalUserInfo */
-interface AuthInfoResponse {
-  user: User.Info
-  visitMode: number
-}
-async function updateLocalUserInfo() {
-  try {
-    const res = await getAuthInfo<AuthInfoResponse>()
-    if (res.code === 0 && res.data) {
-      authStore.setUserInfo(res.data.user)
-      authStore.setVisitMode(res.data.visitMode)
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-async function loadSiteConfig() {
-  try {
-    const res = await cachedRequest('site:about', () => getAbout<Record<string, string>>(), 300)
-    if (res.code === 0) {
-      siteConfig.value = {
-        site_title: res.data?.site_title || '',
-        login_bg_image: res.data?.login_bg_image || '',
-        login_blur: res.data?.login_blur !== undefined ? Number(res.data.login_blur) : 12,
-        login_mask_opacity: res.data?.login_mask_opacity !== undefined ? Number(res.data.login_mask_opacity) : 0.15,
-        footer_html: res.data?.footer_html || '',
-        logo_text: res.data?.logo_text || '',
-        logo_image_src: res.data?.logo_image_src || '',
-        favicon_url: res.data?.favicon_url || '',
-      }
-      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
-      siteConfigLoaded.value = true
-      document.title = siteConfig.value.site_title || 'Sun-Panel'
-      updateFavicon(siteConfig.value.favicon_url || '')
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-/** 统一加载分组 + 图标 + 面板配置（一次 API 调用替代 N+1 次） */
-async function loadData() {
-  loading.value = true
-  try {
-    const res = await cachedRequest('panel:allData', () =>
-      getAllData<{
-        groups: Panel.ItemIconGroup[]
-        itemsMap: Record<number, Panel.ItemInfo[]>
-        panelConfig: Panel.panelConfig
-      }>(),
-    )
-
-    if (res.code === 0 && res.data) {
-      const { groups: rawGroups, itemsMap, panelConfig } = res.data
-
-      groups.value = (rawGroups || []).map((g) => ({
-        ...g,
-        hoverStatus: false,
-        sortStatus: false,
-        items: g.id && itemsMap[g.id] ? itemsMap[g.id] : [],
-      })) as ItemGroup[]
-
-      if (panelConfig && Object.keys(panelConfig).length > 0) {
-        panelState.updatePanelConfigFromCloud(panelConfig)
-      }
-      syncEffectiveWallpaper()
-      // 预加载首屏图标，加速 LCP
-      preloadIconImages(groups.value)
-    }
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-/** 首次加载：合并 auth + siteConfig + panel 三个请求为一次 /init 调用 */
-interface InitData {
-  groups: Panel.ItemIconGroup[]
-  itemsMap: Record<number, Panel.ItemInfo[]>
-  panelConfig: Panel.panelConfig
-  about: Record<string, string>
-  authInfo: { user: User.Info | null; visitMode: number }
-}
-
-async function loadInitData() {
-  loading.value = true
-  try {
-    const res = await getInit<InitData>()
-    if (res.code === 0 && res.data) {
-      const { groups: rawGroups, itemsMap, panelConfig, about, authInfo } = res.data
-
-      // 1. 认证信息
-      if (authInfo) {
-        if (authInfo.user) {
-          authStore.setUserInfo(authInfo.user)
-          authStore.setVisitMode(authInfo.visitMode)
-        } else {
-          authStore.setVisitMode(authInfo.visitMode)
-        }
-      }
-
-      // 2. 站点配置
-      if (about && Object.keys(about).length > 0) {
-        siteConfig.value = {
-          site_title: about.site_title || '',
-          login_bg_image: about.login_bg_image || '',
-          login_blur: about.login_blur !== undefined ? Number(about.login_blur) : 12,
-          login_mask_opacity: about.login_mask_opacity !== undefined ? Number(about.login_mask_opacity) : 0.15,
-          footer_html: about.footer_html || '',
-          logo_text: about.logo_text || '',
-          logo_image_src: about.logo_image_src || '',
-          favicon_url: about.favicon_url || '',
-        }
-        localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
-        siteConfigLoaded.value = true
-        document.title = siteConfig.value.site_title || 'Sun-Panel'
-        updateFavicon(siteConfig.value.favicon_url || '')
-      }
-
-      // 3. 面板数据
-      groups.value = (rawGroups || []).map((g) => ({
-        ...g,
-        hoverStatus: false,
-        sortStatus: false,
-        items: g.id && itemsMap[g.id] ? itemsMap[g.id] : [],
-      })) as ItemGroup[]
-
-      if (panelConfig && Object.keys(panelConfig).length > 0) {
-        panelState.updatePanelConfigFromCloud(panelConfig)
-      }
-      syncEffectiveWallpaper()
-      // 预加载首屏图标，加速 LCP
-      preloadIconImages(groups.value)
-    }
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-function refreshAll() {
-  invalidateCacheByPrefix('panel:')
-  invalidateCache('site:about')
-  Promise.all([updateLocalUserInfo(), loadSiteConfig()]).then(() => {
-    loadData()
-  })
-}
-
-onMounted(async () => {
-  syncGlassVars()
-  // 一次 /init 调用替代 3 次 API 请求，显著减少首次加载的网络往返
-  loadInitData()
-  startAnnouncementTimer()
-})
-
-// ====== 图标编辑 ======
 const { getIconLoading, iconCandidates, getIconByUrl, selectIcon } = useFavicon()
 
 async function handleDeleteItem(item: Panel.ItemInfo) {
@@ -411,12 +163,13 @@ function handleGroupSaved() {
   invalidateCacheByPrefix('panel:')
   loadData()
 }
-function handleSiteConfigUpdate(config: Panel.SiteConfig) {
-  siteConfig.value = config
-  localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
-  document.title = config.site_title || 'Sun-Panel'
-  updateFavicon(config.favicon_url || '')
-}
+
+onMounted(async () => {
+  syncGlassVars()
+  // 一次 /init 调用替代 3 次 API 请求，显著减少首次加载的网络往返
+  loadInitData()
+  startAnnouncementTimer()
+})
 </script>
 
 <template>

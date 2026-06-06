@@ -10,12 +10,6 @@ export interface AuthUser {
   visitMode: number // 0=登录, 1=公开/访客
 }
 
-// ========== 设置缓存（减少 D1 查询） ==========
-let settingsCache: { publicUserId: string | null; guestMode: string | null; timestamp: number } | null = null
-const SETTINGS_CACHE_TTL = 60_000 // 60 秒
-
-let userInfoCache: { user: Record<string, unknown> | null; timestamp: number } | null = null
-
 // ========== 辅助函数 ==========
 
 /** 获取 D1 数据库实例 */
@@ -80,43 +74,28 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
     }
   }
 
-  // 查询公开模式设置（使用缓存减少 D1 请求）
-  const now = Date.now()
-  if (!settingsCache || now - settingsCache.timestamp > SETTINGS_CACHE_TTL) {
-    const settings = await db.batch([
-      db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'"),
-      db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'"),
-    ])
-    settingsCache = {
-      publicUserId: (settings[0].results[0] as { config_value: string } | undefined)?.config_value ?? null,
-      guestMode: (settings[1].results[0] as { config_value: string } | undefined)?.config_value ?? null,
-      timestamp: now,
-    }
-  }
-
-  const publicUserIdValue = settingsCache.publicUserId
-  const guestModeValue = settingsCache.guestMode
+  // 查询公开模式设置
+  const settings = await db.batch([
+    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'"),
+    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'"),
+  ])
+  const publicUserIdValue = (settings[0].results[0] as { config_value: string } | undefined)?.config_value ?? null
+  const guestModeValue = (settings[1].results[0] as { config_value: string } | undefined)?.config_value ?? null
 
   let targetUser: Record<string, unknown> | null = null
-  const cacheValid = userInfoCache && now - userInfoCache.timestamp < SETTINGS_CACHE_TTL
 
-  if (cacheValid) {
-    targetUser = userInfoCache!.user
-  } else {
-    if (publicUserIdValue) {
-      const userId = parseInt(publicUserIdValue, 10)
-      if (!isNaN(userId)) {
-        targetUser = (await db
-          .prepare('SELECT id, username, name, head_image, role, status FROM users WHERE id = ?')
-          .bind(userId)
-          .first()) as Record<string, unknown> | null
-      }
-    } else if (guestModeValue === '1') {
+  if (publicUserIdValue) {
+    const userId = parseInt(publicUserIdValue, 10)
+    if (!isNaN(userId)) {
       targetUser = (await db
-        .prepare('SELECT id, username, name, head_image, role, status FROM users WHERE role = 1 LIMIT 1')
+        .prepare('SELECT id, username, name, head_image, role, status FROM users WHERE id = ?')
+        .bind(userId)
         .first()) as Record<string, unknown> | null
     }
-    userInfoCache = { user: targetUser, timestamp: now }
+  } else if (guestModeValue === '1') {
+    targetUser = (await db
+      .prepare('SELECT id, username, name, head_image, role, status FROM users WHERE role = 1 LIMIT 1')
+      .first()) as Record<string, unknown> | null
   }
 
   if (targetUser) {

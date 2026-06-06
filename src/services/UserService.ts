@@ -3,6 +3,7 @@ import type { UserRow } from '../models/types'
 import { hashPassword, verifyPassword } from '../utils/password'
 import { signToken } from '../utils/jwt'
 import { queryAll, queryFirst } from '../utils/db'
+import { AppError } from '../utils/errors'
 
 export class UserService {
   constructor(private db: D1Database) {}
@@ -25,12 +26,12 @@ export class UserService {
 
   async authenticate(username: string, password: string) {
     const user = await this.findByUsername(username)
-    if (!user) return { error: '用户名或密码错误' as const }
+    if (!user) throw AppError.unauthorized('用户名或密码错误')
 
     const valid = await verifyPassword(password, user.password)
-    if (!valid) return { error: '用户名或密码错误' as const }
+    if (!valid) throw AppError.unauthorized('用户名或密码错误')
 
-    if (user.status !== 1) return { error: '账号已被禁用' as const }
+    if (user.status !== 1) throw AppError.forbidden('账号已被禁用')
 
     const token = await signToken({ userId: user.id, username: user.username, role: user.role })
 
@@ -87,10 +88,10 @@ export class UserService {
   async updatePassword(userId: number, oldPassword: string, newPassword: string) {
     const row = await queryFirst<UserRow>(this.db, 'SELECT password FROM users WHERE id = ?', userId)
 
-    if (!row) return { error: '用户不存在' as const }
+    if (!row) throw AppError.notFound('用户不存在')
 
     const valid = await verifyPassword(oldPassword, row.password)
-    if (!valid) return { error: '原密码错误' as const }
+    if (!valid) throw AppError.badRequest('原密码错误')
 
     const newHash = await hashPassword(newPassword)
     await this.db
@@ -125,7 +126,7 @@ export class UserService {
 
   async adminCreate(username: string, password: string, name: string, role = 2, status = 1) {
     const existing = await this.db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
-    if (existing) return { error: '该用户名已被注册' as const }
+    if (existing) throw AppError.conflict('该用户名已被注册')
 
     const hashedPwd = await hashPassword(password)
     await this.db
@@ -154,7 +155,7 @@ export class UserService {
         .prepare('SELECT id FROM users WHERE username = ? AND id != ?')
         .bind(data.username, id)
         .first()
-      if (existing) return { error: '该用户名已被注册' as const }
+      if (existing) throw AppError.conflict('该用户名已被注册')
       updates.push('username = ?')
       params.push(data.username)
     }
@@ -175,7 +176,7 @@ export class UserService {
       params.push(data.status)
     }
 
-    if (updates.length === 0) return { error: '无更新数据' as const }
+    if (updates.length === 0) throw AppError.badRequest('无更新数据')
 
     updates.push("updated_at = datetime('now')")
     params.push(id)
@@ -189,7 +190,7 @@ export class UserService {
 
   async adminDelete(userIds: number[], selfUserId: number) {
     const filteredIds = userIds.filter((id) => id !== selfUserId)
-    if (filteredIds.length === 0) return { error: '不能删除自己' as const }
+    if (filteredIds.length === 0) throw AppError.badRequest('不能删除自己')
 
     const placeholders = filteredIds.map(() => '?').join(',')
     await Promise.all([
@@ -267,5 +268,40 @@ export class UserService {
         .bind(String(userId))
         .run()
     }
+  }
+
+  async register(username: string, password: string, name?: string, mail?: string) {
+    // Check if username already exists
+    const existing = await this.db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
+    if (existing) {
+      throw AppError.conflict('该用户名已被注册')
+    }
+
+    // Create user
+    const hashed = await hashPassword(password)
+    const result = await this.db
+      .prepare('INSERT INTO users (username, password, name, role, status) VALUES (?, ?, ?, ?, 1)')
+      .bind(username, hashed, name || username, 2)
+      .run()
+
+    const userId = Number(result.meta.last_row_id)
+    await this.db.prepare('INSERT OR IGNORE INTO user_configs (user_id) VALUES (?)').bind(userId).run()
+
+    // Sign JWT token
+    const token = await signToken({ userId, username, role: 2 })
+
+    // Build user info
+    const userInfo = {
+      id: userId,
+      username,
+      name: name || username,
+      headImage: '',
+      status: 1,
+      role: 2,
+      mail: mail || '',
+      created_at: new Date().toISOString(),
+    }
+
+    return { token, userInfo }
   }
 }

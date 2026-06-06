@@ -5,10 +5,12 @@ import { csrfMiddleware } from './middleware/csrf'
 import { securityHeadersMiddleware } from './middleware/securityHeaders'
 import { bodyLimitMiddleware } from './middleware/bodyLimit'
 import { validateEnv } from './utils/env'
+import { AppError } from './utils/errors'
 import authRoutes from './routes/auth'
 import panelRoutes from './routes/panel'
 import groupsRoutes from './routes/groups'
 import usersRoutes from './routes/users'
+import userConfigRoutes from './routes/userConfig'
 import settingsRoutes from './routes/settings'
 import initRoutes from './routes/init'
 
@@ -21,6 +23,10 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 // ========== 全局错误处理 ==========
 app.onError((err, c) => {
+  if (err instanceof AppError) {
+    console.error(`[${err.name}] ${err.code} ${err.message}`)
+    return c.json({ code: err.code, msg: err.message, data: null }, err.httpStatus as any)
+  }
   console.error('[Global Error]', err)
   return c.json({ code: 500, msg: '服务器内部错误', data: null }, 500)
 })
@@ -75,14 +81,14 @@ app.get('/api/health', (c) => {
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } })
 })
 
-// API 路由（与前端 API 路径匹配）
-app.route('/', authRoutes) // /login, /register
-app.route('/', initRoutes) // /init
-app.route('/panel', panelRoutes) // /panel/itemIcon/*
-app.route('/panel', groupsRoutes) // /panel/itemIconGroup/*
-app.route('/panel', usersRoutes) // /panel/userConfig/*, /panel/users/*
-app.route('/', usersRoutes) // /user/*
-app.route('/', settingsRoutes) // /system/*, /about
+// API 路由
+app.route('/', authRoutes)            // /login, /register
+app.route('/', initRoutes)            // /init
+app.route('/panel', panelRoutes)      // /panel/getAllData, /panel/itemIcon/*
+app.route('/panel', groupsRoutes)     // /panel/itemIconGroup/*
+app.route('/panel', userConfigRoutes) // /panel/userConfig/*, /panel/users/*
+app.route('/', usersRoutes)           // /user/*
+app.route('/', settingsRoutes)        // /system/*, /about
 
 // SPA 前端回退：未匹配的 GET 请求返回 index.html（Vue Router hash 模式兜底）
 app.get('*', async (c) => {

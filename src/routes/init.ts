@@ -4,6 +4,7 @@ import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
 import { PanelService } from '../services/PanelService'
 import { SettingsService } from '../services/SettingsService'
 import { ok, fail, getErrorMessage } from '../utils/response'
+import { AppError } from '../utils/errors'
 
 const initApp = new Hono<{ Bindings: { DB: D1Database } }>()
 
@@ -42,6 +43,9 @@ initApp.post('/init', async (c) => {
       authInfo,
     })
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })

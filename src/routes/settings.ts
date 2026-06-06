@@ -4,6 +4,7 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth'
 import { validate, settingGetSchema, settingSetSchema, saveAllSchema } from '../utils/validate'
 import { SettingsService } from '../services/SettingsService'
 import { ok, fail, getErrorMessage } from '../utils/response'
+import { AppError } from '../utils/errors'
 
 type Variables = {
   validatedBody: unknown
@@ -22,6 +23,9 @@ settingsApp.post('/system/setting/get', validate(settingGetSchema), async (c) =>
     const value = await service.get(configName)
     return ok(c, value)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -37,6 +41,9 @@ settingsApp.post('/system/setting/set', authMiddleware, adminMiddleware, validat
     await service.set(configName, configValue ?? '')
     return ok(c, null)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -53,6 +60,9 @@ settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, va
     await service.saveAll(body)
     return ok(c, null)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -68,6 +78,9 @@ settingsApp.post('/about', async (c) => {
     c.header('Cache-Control', 'public, max-age=300')
     return ok(c, settings)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })

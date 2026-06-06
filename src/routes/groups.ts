@@ -4,6 +4,7 @@ import type { z } from 'zod'
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
 import { PanelService } from '../services/PanelService'
 import { ok, fail, getErrorMessage } from '../utils/response'
+import { AppError } from '../utils/errors'
 import { validate, iconGroupSchema, idsSchema, sortSchema } from '../utils/validate'
 
 type Variables = {
@@ -23,6 +24,9 @@ groupsApp.post('/itemIconGroup/getList', async (c) => {
     c.header('Cache-Control', 'public, max-age=60')
     return ok(c, list)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -38,6 +42,9 @@ groupsApp.post('/itemIconGroup/edit', validate(iconGroupSchema), async (c) => {
     const result = await svc.editGroup(body, user.userId)
     return ok(c, result)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -52,6 +59,9 @@ groupsApp.post('/itemIconGroup/deletes', validate(idsSchema), async (c) => {
     await svc.deleteGroups(ids, user.userId)
     return ok(c, null)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
@@ -66,6 +76,9 @@ groupsApp.post('/itemIconGroup/saveSort', validate(sortSchema), async (c) => {
     await svc.saveGroupSort(sortItems, user.userId)
     return ok(c, null)
   } catch (e: unknown) {
+    if (e instanceof AppError) {
+      return fail(c, e.message, e.code, e.httpStatus)
+    }
     return fail(c, getErrorMessage(e), 500)
   }
 })
