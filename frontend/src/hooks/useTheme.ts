@@ -11,9 +11,7 @@ export function useTheme() {
 
   onMounted(() => {
     mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    handler = (e: MediaQueryListEvent) => {
-      systemDark.value = e.matches
-    }
+    handler = (e: MediaQueryListEvent) => { systemDark.value = e.matches }
     mediaQuery.addEventListener('change', handler)
   })
 

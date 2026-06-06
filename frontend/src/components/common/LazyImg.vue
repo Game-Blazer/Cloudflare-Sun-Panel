@@ -1,34 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    src: string
-    alt?: string
-    /** 响应式图片源集 (用于不同分辨率) */
-    srcset?: string
-    /** 响应式尺寸 (配合 srcset 使用) */
-    sizes?: string
-    /** 图片加载优先级: high / low / auto */
-    fetchpriority?: 'high' | 'low' | 'auto'
-    /** 图片加载失败后是否显示文字回退 */
-    fallbackText?: string
-    fallbackBg?: string
-    /** 是否使用 IntersectionObserver 懒加载（默认 true） */
-    lazy?: boolean
-    /** 距离视口的提前加载距离 (px) */
-    rootMargin?: string
-  }>(),
-  {
-    alt: '',
-    srcset: '',
-    sizes: '',
-    fetchpriority: 'auto',
-    fallbackBg: '#4a90d9',
-    lazy: true,
-    rootMargin: '200px',
-  },
-)
+const props = withDefaults(defineProps<{
+  src: string
+  alt?: string
+  /** 响应式图片源集 (用于不同分辨率) */
+  srcset?: string
+  /** 响应式尺寸 (配合 srcset 使用) */
+  sizes?: string
+  /** 图片加载优先级: high / low / auto */
+  fetchpriority?: 'high' | 'low' | 'auto'
+  /** 图片加载失败后是否显示文字回退 */
+  fallbackText?: string
+  fallbackBg?: string
+  /** 是否使用 IntersectionObserver 懒加载（默认 true） */
+  lazy?: boolean
+  /** 距离视口的提前加载距离 (px) */
+  rootMargin?: string
+}>(), {
+  alt: '',
+  srcset: '',
+  sizes: '',
+  fetchpriority: 'auto',
+  fallbackBg: '#4a90d9',
+  lazy: true,
+  rootMargin: '200px',
+})
 
 const emit = defineEmits<{
   (e: 'loaded'): void
@@ -42,7 +39,7 @@ const inView = ref(!props.lazy)
 let observer: IntersectionObserver | null = null
 const imgRef = ref<HTMLElement | null>(null)
 
-const showSrc = computed(() => (!errored.value ? props.src : ''))
+const showSrc = computed(() => (!errored.value) ? props.src : '')
 
 function onLoad() {
   loaded.value = true
@@ -155,9 +152,7 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 .animate-spin {
   animation: spin 0.8s linear infinite;
