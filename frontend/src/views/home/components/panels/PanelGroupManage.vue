@@ -27,16 +27,23 @@ const emit = defineEmits<{
 }>()
 
 const localGroups = ref<ItemGroup[]>([...props.groups])
-watch(() => props.groups, (val) => { localGroups.value = [...val] })
+watch(
+  () => props.groups,
+  (val) => {
+    localGroups.value = [...val]
+  },
+)
 
 async function handleGroupSortEnd() {
-  const sortItems = localGroups.value.filter(g => g.id).map((g, i) => ({ id: g.id!, sort: i }))
+  const sortItems = localGroups.value.filter((g) => g.id).map((g, i) => ({ id: g.id!, sort: i }))
   try {
     const res = await saveGroupSort(sortItems)
     if (res.code === 0) {
       emit('saved')
     }
-  } catch { /* error handled by parent */ }
+  } catch {
+    /* error handled by parent */
+  }
 }
 
 function handleAddGroup() {
@@ -56,12 +63,24 @@ function handleDeleteGroup(group: ItemGroup) {
   <div class="flex flex-col gap-4">
     <div class="flex gap-2"><NButton type="primary" size="small" @click="handleAddGroup">添加分组</NButton></div>
     <div class="text-xs text-gray-400">拖拽分组可调整排序</div>
-    <VueDraggable v-model="localGroups" :animation="200" class="flex flex-col gap-2 max-h-[250px] sm:max-h-[340px] overflow-auto" @end="handleGroupSortEnd">
-      <div v-for="(group, gi) in localGroups" :key="group.id || gi" class="flex items-center justify-between p-3 border rounded cursor-move bg-white/50 dark:bg-gray-800/50">
+    <VueDraggable
+      v-model="localGroups"
+      :animation="200"
+      class="flex flex-col gap-2 max-h-[250px] sm:max-h-[340px] overflow-auto"
+      @end="handleGroupSortEnd"
+    >
+      <div
+        v-for="(group, gi) in localGroups"
+        :key="group.id || gi"
+        class="flex items-center justify-between p-3 border rounded cursor-move bg-white/50 dark:bg-gray-800/50"
+      >
         <div class="flex items-center gap-2">
           <span class="text-gray-400 text-sm cursor-move">⠿</span>
           <span class="font-medium">{{ group.title }}</span>
-          <span class="text-xs px-1.5 py-0.5 rounded" :class="group.publicVisible !== 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+          <span
+            class="text-xs px-1.5 py-0.5 rounded"
+            :class="group.publicVisible !== 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+          >
             {{ group.publicVisible !== 0 ? '访客可见' : '隐藏' }}
           </span>
         </div>

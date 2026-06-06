@@ -9,7 +9,7 @@
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
   const hashArray = Array.from(new Uint8Array(buffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function sha256(message: string): Promise<string> {
@@ -22,7 +22,9 @@ async function sha256(message: string): Promise<string> {
 function generateSalt(): string {
   const bytes = new Uint8Array(16)
   crypto.getRandomValues(bytes)
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /** 加盐哈希: $2$<salt_hex>$<sha256(salt + password)> */

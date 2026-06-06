@@ -15,14 +15,7 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 
-const {
-  hasPublicMode,
-  siteTitle,
-  loginBgImage,
-  loginPageStyle,
-  loginCardStyle,
-  initLoginPage,
-} = useLoginPage()
+const { hasPublicMode, siteTitle, loginBgImage, loginPageStyle, loginCardStyle, initLoginPage } = useLoginPage()
 
 onMounted(() => {
   initLoginPage()
@@ -45,7 +38,9 @@ async function handleLogin() {
     }
   } catch {
     message.error('网络错误，请稍后重试')
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+  }
 }
 
 async function handleSkipLogin() {
@@ -71,10 +66,24 @@ async function handleSkipLogin() {
 
       <NForm @submit.prevent="handleLogin">
         <NFormItem label="用户名">
-          <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
+          <NInput
+            v-model:value="username"
+            placeholder="请输入用户名"
+            size="large"
+            :disabled="loading"
+            autocomplete="username"
+          />
         </NFormItem>
         <NFormItem label="密码">
-          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
+          <NInput
+            v-model:value="password"
+            type="password"
+            placeholder="请输入密码"
+            size="large"
+            :disabled="loading"
+            autocomplete="current-password"
+            @keyup.enter="handleLogin"
+          />
         </NFormItem>
         <NButton type="primary" block size="large" :loading="loading" @click="handleLogin">登录</NButton>
       </NForm>

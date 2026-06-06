@@ -10,8 +10,7 @@ const service = axios.create({
 service.interceptors.request.use(
   (config) => {
     const token = useAuthStore().token
-    if (token)
-      config.headers.Authorization = `Bearer ${token}`
+    if (token) config.headers.Authorization = `Bearer ${token}`
     return config
   },
   (error) => {
@@ -21,14 +20,7 @@ service.interceptors.request.use(
 
 service.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => {
-    if (response.status === 200)
-      return response
-
-    if (response.status === 401) {
-      const authStore = useAuthStore()
-      authStore.removeToken()
-      router.push('/login')
-    }
+    if (response.status === 200) return response
     throw new Error(response.status.toString())
   },
   (error) => {

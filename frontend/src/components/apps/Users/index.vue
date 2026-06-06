@@ -21,10 +21,8 @@ const columns: DataTableColumns<User.Info> = [
     key: 'username',
     render(row: User.Info) {
       let prefix = ''
-      if (publicVisitUserId.value && publicVisitUserId.value === row.id)
-        prefix = '[公开]-'
-      if (row.username === authStore.userInfo?.username)
-        return `${prefix}${row.username} (当前用户)`
+      if (publicVisitUserId.value && publicVisitUserId.value === row.id) prefix = '[公开]-'
+      if (row.username === authStore.userInfo?.username) return `${prefix}${row.username} (当前用户)`
       return prefix + row.username
     },
   },
@@ -44,42 +42,46 @@ const columns: DataTableColumns<User.Info> = [
     key: 'action',
     render(row) {
       const btn = h(NButton, { strong: true, tertiary: true, size: 'small' }, { default: () => '...' })
-      return h(NDropdown, {
-        trigger: 'click',
-        onSelect(key: string | number) {
-          switch (key) {
-            case 'update':
-              editUserUserInfo.value = row
-              editUserDialogShow.value = true
-              break
-            case 'publicMode':
-              if (publicVisitUserId.value && publicVisitUserId.value === row.id) {
-                setPublicVisitUser(null).then(({ code }) => {
-                  if (code === 0) publicVisitUserId.value = null
+      return h(
+        NDropdown,
+        {
+          trigger: 'click',
+          onSelect(key: string | number) {
+            switch (key) {
+              case 'update':
+                editUserUserInfo.value = row
+                editUserDialogShow.value = true
+                break
+              case 'publicMode':
+                if (publicVisitUserId.value && publicVisitUserId.value === row.id) {
+                  setPublicVisitUser(null).then(({ code }) => {
+                    if (code === 0) publicVisitUserId.value = null
+                  })
+                } else {
+                  setPublicVisitUser(row.id as number).then(({ code }) => {
+                    if (code === 0) publicVisitUserId.value = row.id as number
+                  })
+                }
+                break
+              case 'delete':
+                dialog.warning({
+                  title: '警告',
+                  content: `确定删除用户 "${row.name}" (${row.username}) 吗？`,
+                  positiveText: '确定',
+                  negativeText: '取消',
+                  onPositiveClick: () => handleDelete([row.id as number]),
                 })
-              } else {
-                setPublicVisitUser(row.id as number).then(({ code }) => {
-                  if (code === 0) publicVisitUserId.value = row.id as number
-                })
-              }
-              break
-            case 'delete':
-              dialog.warning({
-                title: '警告',
-                content: `确定删除用户 "${row.name}" (${row.username}) 吗？`,
-                positiveText: '确定',
-                negativeText: '取消',
-                onPositiveClick: () => handleDelete([row.id as number]),
-              })
-              break
-          }
+                break
+            }
+          },
+          options: [
+            { label: '编辑', key: 'update' },
+            { label: '设置/取消公开访问', key: 'publicMode' },
+            { label: '删除', key: 'delete' },
+          ],
         },
-        options: [
-          { label: '编辑', key: 'update' },
-          { label: '设置/取消公开访问', key: 'publicMode' },
-          { label: '删除', key: 'delete' },
-        ],
-      }, { default: () => btn })
+        { default: () => btn },
+      )
     },
   },
 ]
@@ -140,7 +142,9 @@ onMounted(async () => {
     const { data } = await getPublicVisitUser<User.Info | null>()
     if (data?.id) publicVisitUserId.value = data.id
     else publicVisitUserId.value = null
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   loadList()
 })
 </script>
@@ -152,9 +156,7 @@ onMounted(async () => {
     </NAlert>
 
     <div class="my-3">
-      <NButton type="primary" size="small" ghost @click="handleAdd">
-        添加用户
-      </NButton>
+      <NButton type="primary" size="small" ghost @click="handleAdd"> 添加用户 </NButton>
     </div>
 
     <NDataTable

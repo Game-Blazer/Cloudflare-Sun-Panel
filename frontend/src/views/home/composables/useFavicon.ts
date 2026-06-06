@@ -8,7 +8,10 @@ export function useFavicon() {
   const iconCandidates = ref<string[]>([])
 
   async function getIconByUrl(url: string) {
-    if (!url) { message.warning('请先输入网址'); return }
+    if (!url) {
+      message.warning('请先输入网址')
+      return
+    }
     getIconLoading.value = true
     iconCandidates.value = []
     try {

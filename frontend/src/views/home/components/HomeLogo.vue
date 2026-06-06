@@ -58,7 +58,8 @@ onUnmounted(() => {
       <span
         v-if="authStore.isVisitMode"
         class="text-yellow-400 text-[10px] sm:text-xs bg-yellow-900/50 px-1.5 sm:px-2 py-0.5 rounded"
-      >访客模式</span>
+        >访客模式</span
+      >
     </div>
   </div>
 </template>

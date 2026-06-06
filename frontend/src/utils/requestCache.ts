@@ -19,7 +19,7 @@ export function cachedRequest<T>(key: string, requestFn: () => Promise<T>, maxAg
   const existing = cache.get(key) as CacheEntry<T> | undefined
 
   // 缓存命中：已完成的请求且未过期
-  if (existing && existing.settled && (now - existing.timestamp) < maxAge * 1000) {
+  if (existing && existing.settled && now - existing.timestamp < maxAge * 1000) {
     return Promise.resolve(existing.data!)
   }
 
@@ -30,15 +30,17 @@ export function cachedRequest<T>(key: string, requestFn: () => Promise<T>, maxAg
 
   // 新请求
   const entry: CacheEntry<T> = {
-    promise: requestFn().then(data => {
-      entry.settled = true
-      entry.data = data
-      entry.timestamp = Date.now()
-      return data
-    }).catch(err => {
-      cache.delete(key)
-      throw err
-    }),
+    promise: requestFn()
+      .then((data) => {
+        entry.settled = true
+        entry.data = data
+        entry.timestamp = Date.now()
+        return data
+      })
+      .catch((err) => {
+        cache.delete(key)
+        throw err
+      }),
     settled: false,
     timestamp: now,
   }

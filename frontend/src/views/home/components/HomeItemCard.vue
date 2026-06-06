@@ -20,9 +20,19 @@ const emit = defineEmits<{
     @click="emit('click', item)"
   >
     <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
-      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+      <img
+        v-if="item.icon?.src"
+        :src="item.icon.src"
+        class="w-full h-full object-cover"
+        :alt="item.title"
+        loading="lazy"
+        decoding="async"
+      />
+      <div
+        v-else
+        class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }"
+      >
         {{ item.icon?.text || item.title?.charAt(0) || '?' }}
       </div>
     </div>

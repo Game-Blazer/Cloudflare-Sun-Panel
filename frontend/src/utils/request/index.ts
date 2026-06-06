@@ -21,19 +21,18 @@ export interface Response<T = unknown> {
   code: number
 }
 
-function http<T = unknown>(
-  { url, data, method, headers, signal, beforeRequest, afterRequest }: HttpOption,
-) {
+function http<T = unknown>({ url, data, method, headers, signal, beforeRequest, afterRequest }: HttpOption) {
   const authStore = useAuthStore()
 
   const successHandler = (res: AxiosResponse<Response<T>>) => {
-    if (res.data.code === 0)
-      return res.data
+    if (res.data.code === 0) return res.data
 
     if (res.data.code === 401 || res.data.code === 1001 || res.data.code === 1000) {
       if (!loginMessageShow) {
         loginMessageShow = true
-        setTimeout(() => { loginMessageShow = false }, 3000)
+        setTimeout(() => {
+          loginMessageShow = false
+        }, 3000)
       }
       router.push({ path: '/login' })
       authStore.removeToken()

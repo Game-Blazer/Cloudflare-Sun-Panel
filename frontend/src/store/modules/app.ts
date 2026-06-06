@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 
 export const useAppStore = defineStore('app', {
   state: () => ({
-    language: 'zh-CN',
-    theme: 'auto' as 'light' | 'dark' | 'auto',
+    language: (localStorage.getItem('sun-panel-lang') as string) || 'zh-CN',
+    theme: (localStorage.getItem('sun-panel-theme') as 'light' | 'dark' | 'auto') || 'auto',
   }),
 
   actions: {

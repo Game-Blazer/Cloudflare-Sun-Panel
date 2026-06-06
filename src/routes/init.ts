@@ -1,20 +1,20 @@
-import { Hono } from 'hono';
-import type { D1Database } from '@cloudflare/workers-types';
-import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
-import { PanelService } from '../services/PanelService';
-import { SettingsService } from '../services/SettingsService';
-import { ok, fail, getErrorMessage } from '../utils/response';
+import { Hono } from 'hono'
+import type { D1Database } from '@cloudflare/workers-types'
+import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
+import { PanelService } from '../services/PanelService'
+import { SettingsService } from '../services/SettingsService'
+import { ok, fail, getErrorMessage } from '../utils/response'
 
-const initApp = new Hono<{ Bindings: { DB: D1Database } }>();
+const initApp = new Hono<{ Bindings: { DB: D1Database } }>()
 
-initApp.use('*', publicModeMiddleware);
+initApp.use('*', publicModeMiddleware)
 
 initApp.post('/init', async (c) => {
   try {
-    const user = getAuthUser(c);
-    const db = c.env.DB;
-    const panelService = new PanelService(db);
-    const settingsService = new SettingsService(db);
+    const user = getAuthUser(c)
+    const db = c.env.DB
+    const panelService = new PanelService(db)
+    const settingsService = new SettingsService(db)
 
     const [panelData, aboutData, authInfo] = await Promise.all([
       panelService.getAllData(user?.userId || 0),
@@ -29,21 +29,21 @@ initApp.post('/init', async (c) => {
               role: user.role,
             },
             visitMode: user.visitMode,
-          };
+          }
         }
-        return { user: null, visitMode: 1 };
+        return { user: null, visitMode: 1 }
       })(),
-    ]);
+    ])
 
-    c.header('Cache-Control', 'public, max-age=30');
+    c.header('Cache-Control', 'public, max-age=30')
     return ok(c, {
       ...panelData,
       about: aboutData,
       authInfo,
-    });
+    })
   } catch (e: unknown) {
-    return fail(c, getErrorMessage(e), 500);
+    return fail(c, getErrorMessage(e), 500)
   }
-});
+})
 
-export default initApp;
+export default initApp

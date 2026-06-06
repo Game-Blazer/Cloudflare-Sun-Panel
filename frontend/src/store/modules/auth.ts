@@ -22,7 +22,11 @@ export const useAuthStore = defineStore('auth', {
     const visitMode = Number(localStorage.getItem(VISIT_MODE_KEY)) || VisitMode.VISIT_MODE_LOGIN
     let userInfo = null
     if (userStr) {
-      try { userInfo = JSON.parse(userStr) } catch { userInfo = null }
+      try {
+        userInfo = JSON.parse(userStr)
+      } catch {
+        userInfo = null
+      }
     }
     return {
       token,

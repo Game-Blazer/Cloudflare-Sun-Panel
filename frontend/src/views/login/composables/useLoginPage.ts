@@ -16,7 +16,9 @@ function getCachedLoginStyle(): CachedLoginStyle {
     if (cached) {
       return JSON.parse(cached)
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { blur: 12, opacity: 0.15 }
 }
 
@@ -107,8 +109,12 @@ export function useLoginPage() {
           preloadLoginBg(bgUrl)
           // 用 Image 对象预加载，确保图片就绪后再切换背景，避免闪烁
           const img = new Image()
-          img.onload = () => { loginBgImage.value = bgUrl }
-          img.onerror = () => { /* 加载失败，保持渐变背景 */ }
+          img.onload = () => {
+            loginBgImage.value = bgUrl
+          }
+          img.onerror = () => {
+            /* 加载失败，保持渐变背景 */
+          }
           img.src = bgUrl
         }
         // 读取登录卡片模糊度和遮罩不透明度设置
@@ -119,12 +125,17 @@ export function useLoginPage() {
           loginMaskOpacity.value = Number(res.data.login_mask_opacity)
         }
         // 缓存样式用于下次访问
-        localStorage.setItem(LOGIN_STYLE_CACHE_KEY, JSON.stringify({
-          blur: loginBlur.value,
-          opacity: loginMaskOpacity.value,
-        }))
+        localStorage.setItem(
+          LOGIN_STYLE_CACHE_KEY,
+          JSON.stringify({
+            blur: loginBlur.value,
+            opacity: loginMaskOpacity.value,
+          }),
+        )
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return {

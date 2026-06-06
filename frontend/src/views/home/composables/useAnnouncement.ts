@@ -29,7 +29,10 @@ export function useAnnouncement() {
   }
 
   function clearAnnouncementTimer() {
-    if (announcementTimer) { clearTimeout(announcementTimer); announcementTimer = null }
+    if (announcementTimer) {
+      clearTimeout(announcementTimer)
+      announcementTimer = null
+    }
   }
 
   function dismissAnnouncement() {

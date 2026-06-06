@@ -8,7 +8,9 @@ export function useItemEditor(loadData: () => Promise<void>) {
 
   const editModalShow = ref(false)
   const editingItem = ref<Panel.ItemInfo>({
-    title: '', url: '', openMethod: 2,
+    title: '',
+    url: '',
+    openMethod: 2,
     icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
     itemIconGroupId: undefined,
   })
@@ -16,7 +18,10 @@ export function useItemEditor(loadData: () => Promise<void>) {
 
   function openAddItem(groupId: number) {
     editingItem.value = {
-      title: '', url: '', description: '', openMethod: 2,
+      title: '',
+      url: '',
+      description: '',
+      openMethod: 2,
       icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
       itemIconGroupId: groupId,
     }
@@ -32,12 +37,21 @@ export function useItemEditor(loadData: () => Promise<void>) {
 
   async function handleSaveItem() {
     const item = editingItem.value
-    if (!item?.title) { message.warning('请输入标题'); return }
+    if (!item?.title) {
+      message.warning('请输入标题')
+      return
+    }
     try {
       const res = item.id ? await editItem<Panel.ItemInfo>(item) : await addItems<Panel.ItemInfo[]>([item])
-      if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadData() }
-      else message.error(res.msg || '保存失败')
-    } catch { message.error('网络错误') }
+      if (res.code === 0) {
+        message.success('保存成功')
+        editModalShow.value = false
+        invalidateCacheByPrefix('panel:')
+        await loadData()
+      } else message.error(res.msg || '保存失败')
+    } catch {
+      message.error('网络错误')
+    }
   }
 
   return {

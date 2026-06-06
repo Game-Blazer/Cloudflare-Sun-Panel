@@ -39,10 +39,16 @@ const VALID_APP_NAMES = ['Sun-Panel', 'Sun-Panel-Config']
 const CURRENT_VERSION = 1
 const APP_NAME = 'Sun-Panel'
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
 function formatDate(): string {
   const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function formatDateCompact(): string {
+  const d = new Date()
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}`
 }
 
 /** 创建导出数据结构 */
@@ -60,9 +66,7 @@ export function createExportData(groups: ExportGroup[]): ExportData {
 export function downloadJSON(data: ExportData): void {
   const jsonStr = JSON.stringify(data, null, 2)
   const blob = new Blob([jsonStr], { type: 'application/json' })
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const filename = `SunPanel-Data-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}.sun-panel.json`
+  const filename = `SunPanel-Data-${formatDateCompact()}.sun-panel.json`
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = filename

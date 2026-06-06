@@ -34,11 +34,12 @@ const roleOptions = [
 ]
 
 const rules: FormRules = {
-  username: [
-    { required: true, trigger: 'blur', message: '请输入用户名', min: 1 },
-  ],
+  username: [{ required: true, trigger: 'blur', message: '请输入用户名', min: 1 }],
   role: {
-    required: true, trigger: 'blur', type: 'number', message: '请选择角色',
+    required: true,
+    trigger: 'blur',
+    type: 'number',
+    message: '请选择角色',
   },
 }
 
@@ -49,15 +50,18 @@ const show = computed({
 
 const isEdit = computed(() => !!props.userInfo?.id)
 
-watch(() => props.visible, (val) => {
-  if (val) {
-    if (props.userInfo?.id) {
-      model.value = { ...props.userInfo, password: '' }
-    } else {
-      model.value = { ...formInitValue }
+watch(
+  () => props.visible,
+  (val) => {
+    if (val) {
+      if (props.userInfo?.id) {
+        model.value = { ...props.userInfo, password: '' }
+      } else {
+        model.value = { ...formInitValue }
+      }
     }
-  }
-})
+  },
+)
 
 interface UserSaveRequest {
   username: string
@@ -84,9 +88,7 @@ async function handleSave() {
     req.password = model.value.password
   }
 
-  const res = isEdit.value
-    ? await updateUser(req)
-    : await createUser(req)
+  const res = isEdit.value ? await updateUser(req) : await createUser(req)
 
   if (res.code === 0) {
     message.success('保存成功')
@@ -136,9 +138,7 @@ function handleValidateClick(e: MouseEvent) {
 
     <template #footer>
       <div class="flex justify-end">
-        <NButton type="primary" size="small" @click="handleValidateClick">
-          保存
-        </NButton>
+        <NButton type="primary" size="small" @click="handleValidateClick"> 保存 </NButton>
       </div>
     </template>
   </NModal>

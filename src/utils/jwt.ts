@@ -23,13 +23,7 @@ function getSecretKey(customSecret?: string): string {
 async function getKey(secret?: string): Promise<CryptoKey> {
   const encoder = new TextEncoder()
   const keyData = encoder.encode(getSecretKey(secret))
-  return crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  )
+  return crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])
 }
 
 function base64UrlEncode(buffer: ArrayBuffer): string {
@@ -68,10 +62,7 @@ export interface SignOptions {
   expiresInSeconds?: number
 }
 
-export async function signToken(
-  payload: Record<string, unknown>,
-  options: SignOptions = {}
-): Promise<string> {
+export async function signToken(payload: Record<string, unknown>, options: SignOptions = {}): Promise<string> {
   const key = await getKey(options.secret)
   const encoder = new TextEncoder()
 
@@ -95,10 +86,7 @@ export async function signToken(
   return `${signingInput}.${signatureB64}`
 }
 
-export async function verifyToken(
-  token: string,
-  secret?: string
-): Promise<Record<string, unknown> | null> {
+export async function verifyToken(token: string, secret?: string): Promise<Record<string, unknown> | null> {
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null

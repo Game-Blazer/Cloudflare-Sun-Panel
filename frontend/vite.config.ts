@@ -37,7 +37,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     sourcemap: false,
     reportCompressedSize: false,
-    assetsInlineLimit: 8192,
+    assetsInlineLimit: 4096,
     modulePreload: {
       polyfill: true,
     },

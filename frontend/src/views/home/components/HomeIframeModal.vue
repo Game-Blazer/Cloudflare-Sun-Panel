@@ -22,8 +22,13 @@ const show = computed({
 
 <template>
   <NModal
-    v-model:show="show" :mask-closable="false" preset="card"
-    class="max-w-[1000px] w-[95vw] h-[85vh] sm:h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
+    v-model:show="show"
+    :mask-closable="false"
+    preset="card"
+    class="max-w-[1000px] w-[95vw] h-[85vh] sm:h-[600px] rounded-2xl"
+    :bordered="true"
+    size="small"
+    role="dialog"
     aria-modal="true"
   >
     <template #header>
@@ -38,10 +43,7 @@ const show = computed({
         <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
         <NSkeleton height="180px" width="100%" class="mt-[20px] rounded-lg" />
       </div>
-      <iframe
-        v-show="!isLoading" :src="src"
-        class="w-full h-full" frameborder="0" @load="emit('loaded')"
-      />
+      <iframe v-show="!isLoading" :src="src" class="w-full h-full" frameborder="0" @load="emit('loaded')" />
     </div>
   </NModal>
 </template>

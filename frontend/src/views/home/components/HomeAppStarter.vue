@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState } from '@/store'
@@ -85,9 +85,13 @@ const layoutHeight = computed(() => {
 })
 
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', handleResize, { passive: true })
   handleResize()
   syncSiteConfig()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 
 // ====== 站点设置 ======
@@ -97,7 +101,11 @@ function syncSiteConfig() {
   localSiteConfig.value = { ...props.siteConfig }
 }
 
-watch(() => props.siteConfig, () => syncSiteConfig(), { deep: true })
+watch(
+  () => props.siteConfig,
+  () => syncSiteConfig(),
+  { deep: true },
+)
 
 function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   emit('update:siteConfig', config)
@@ -112,17 +120,27 @@ function openEditGroup(group: ItemGroup) {
 async function handleSaveGroup() {
   try {
     const res = await saveGroup(editingGroup.value)
-    if (res.code === 0) { message.success('保存成功'); editGroupModalVisible.value = false; props.onSaved() }
-    else message.error(res.msg || '保存失败')
-  } catch { message.error('网络错误') }
+    if (res.code === 0) {
+      message.success('保存成功')
+      editGroupModalVisible.value = false
+      props.onSaved()
+    } else message.error(res.msg || '保存失败')
+  } catch {
+    message.error('网络错误')
+  }
 }
 
 async function handleDeleteGroup(group: ItemGroup) {
   if (!group.id) return
   try {
     const res = await deleteGroups([group.id])
-    if (res.code === 0) { message.success('删除成功'); props.onSaved() }
-  } catch { message.error('网络错误') }
+    if (res.code === 0) {
+      message.success('删除成功')
+      props.onSaved()
+    }
+  } catch {
+    message.error('网络错误')
+  }
 }
 
 function openAddGroup() {
@@ -136,11 +154,18 @@ function handleGroupSaved() {
 </script>
 
 <template>
-  <NModal v-model:show="show" preset="card" title="" class="w-[95vw] sm:w-[700px] md:w-[900px]" size="small" :mask-closable="true">
+  <NModal
+    v-model:show="show"
+    preset="card"
+    title=""
+    class="w-[95vw] sm:w-[700px] md:w-[900px]"
+    size="small"
+    :mask-closable="true"
+  >
     <template #header>
       <div class="flex items-center select-none cursor-pointer" @click="collapsed = !collapsed">
         <span class="text-lg mr-2">{{ collapsed ? '▶' : '◀' }}</span>
-        <span>{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
+        <span>{{ apps.find((a) => a.key === activeApp)?.name || '应用启动器' }}</span>
       </div>
     </template>
     <NLayout has-sider :style="`height:${layoutHeight};border-radius:0.75rem;`">
@@ -153,10 +178,18 @@ function handleGroupSaved() {
       >
         <div class="h-full dark:bg-[#2c2c32] p-2">
           <div
-            v-for="app in apps" :key="app.key"
+            v-for="app in apps"
+            :key="app.key"
             class="px-3 py-2.5 rounded-lg mb-1 cursor-pointer font-medium text-sm flex items-center gap-2 transition-colors"
-            :class="activeApp === app.key ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'"
-            @click="activeApp = app.key; if (isSmallScreen) collapsed = true"
+            :class="
+              activeApp === app.key
+                ? 'bg-blue-500 text-white'
+                : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'
+            "
+            @click="
+              activeApp = app.key
+              if (isSmallScreen) collapsed = true
+            "
           >
             <span>{{ app.icon }}</span>
             <span>{{ app.name }}</span>
@@ -165,16 +198,11 @@ function handleGroupSaved() {
       </NLayoutSider>
       <NLayoutContent :content-style="`height:${layoutHeight}`">
         <div class="h-full overflow-auto p-3 sm:p-4">
-
           <!-- ====== 我的信息 ====== -->
           <PanelUserInfo v-if="activeApp === 'UserInfo'" />
 
           <!-- ====== 风格设置 ====== -->
-          <PanelStyleSettings
-            v-if="activeApp === 'Style'"
-            :panel-config="panelConfig"
-            :on-saved="props.onSaved"
-          />
+          <PanelStyleSettings v-if="activeApp === 'Style'" :panel-config="panelConfig" :on-saved="props.onSaved" />
 
           <!-- ====== 公告设置 ====== -->
           <PanelAnnounceSettings
@@ -194,10 +222,7 @@ function handleGroupSaved() {
           />
 
           <!-- ====== 导入导出 ====== -->
-          <PanelImportExport
-            v-if="activeApp === 'ImportExport'"
-            :on-saved="props.onSaved"
-          />
+          <PanelImportExport v-if="activeApp === 'ImportExport'" :on-saved="props.onSaved" />
 
           <!-- ====== 用户管理 ====== -->
           <div v-if="activeApp === 'Users'" class="flex flex-col gap-4">
@@ -210,7 +235,6 @@ function handleGroupSaved() {
             :site-config="localSiteConfig"
             @update:site-config="handleSiteConfigUpdate"
           />
-
         </div>
       </NLayoutContent>
     </NLayout>
@@ -218,8 +242,14 @@ function handleGroupSaved() {
     <!-- 分组编辑弹窗 -->
     <NModal v-model:show="editGroupModalVisible" title="编辑分组" preset="card" class="w-[400px]">
       <div v-if="editingGroup" class="flex flex-col gap-4">
-        <div><label class="block text-sm mb-1">分组名称 *</label>
-          <input v-model="editingGroup.title" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="请输入分组名称" /></div>
+        <div>
+          <label class="block text-sm mb-1">分组名称 *</label>
+          <input
+            v-model="editingGroup.title"
+            class="w-full border rounded px-3 py-2 sm:text-sm text-base"
+            placeholder="请输入分组名称"
+          />
+        </div>
         <div class="flex items-center gap-2">
           <label class="text-sm">访客可见</label>
           <NSwitch v-model:value="editingGroup.publicVisible" :checked-value="1" :unchecked-value="0" />
@@ -234,5 +264,7 @@ function handleGroupSaved() {
 </template>
 
 <style scoped>
-:deep(.n-layout) { background-color: transparent !important; }
+:deep(.n-layout) {
+  background-color: transparent !important;
+}
 </style>

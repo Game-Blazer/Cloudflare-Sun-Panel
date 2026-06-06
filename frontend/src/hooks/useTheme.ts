@@ -7,15 +7,20 @@ export function useTheme() {
   const systemDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   let mediaQuery: MediaQueryList | null = null
+  let handler: ((e: MediaQueryListEvent) => void) | null = null
 
   onMounted(() => {
     mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => { systemDark.value = e.matches }
+    handler = (e: MediaQueryListEvent) => {
+      systemDark.value = e.matches
+    }
     mediaQuery.addEventListener('change', handler)
   })
 
   onUnmounted(() => {
-    if (mediaQuery) mediaQuery.removeEventListener('change', () => {})
+    if (mediaQuery && handler) {
+      mediaQuery.removeEventListener('change', handler)
+    }
   })
 
   const theme = computed(() => {

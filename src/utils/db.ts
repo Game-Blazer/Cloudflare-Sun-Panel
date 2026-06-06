@@ -8,7 +8,7 @@ export async function queryAll<T>(db: D1Database, sql: string, ...params: unknow
     const result = await db.prepare(sql).bind(...params).all()
     return result.results as unknown as T[]
   } catch (err: unknown) {
-    throw new Error(`数据库查询失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    throw new Error(`数据库查询失败: ${err instanceof Error ? err.message : '未知错误'}`, { cause: err })
   }
 }
 
@@ -20,6 +20,6 @@ export async function queryFirst<T>(db: D1Database, sql: string, ...params: unkn
     const result = await db.prepare(sql).bind(...params).first()
     return result as unknown as T | null
   } catch (err: unknown) {
-    throw new Error(`数据库查询失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    throw new Error(`数据库查询失败: ${err instanceof Error ? err.message : '未知错误'}`, { cause: err })
   }
 }
