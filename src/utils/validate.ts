@@ -102,7 +102,7 @@ export const userUpdateSchema = z.object({
 
 export const userPasswordSchema = z.object({
   oldPassword: z.string().min(1, '密码不能为空'),
-  newPassword: z.string().min(1, '密码不能为空'),
+  newPassword: z.string().min(6, '新密码至少6位').max(128),
 })
 
 export const userAdminCreateSchema = z.object({
