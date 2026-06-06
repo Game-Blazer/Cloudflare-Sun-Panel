@@ -65,6 +65,10 @@ export function getSiteFavicon<T>(url: string) {
   return post<T>({ url: '/panel/itemIcon/getSiteFavicon', data: { url } })
 }
 
+export function proxyIcon<T>(url: string) {
+  return post<T>({ url: '/panel/itemIcon/proxyIcon', data: { url } })
+}
+
 // ========== 用户配置 API ==========
 export function getUserConfig<T>() {
   return post<T>({ url: '/panel/userConfig/get' })

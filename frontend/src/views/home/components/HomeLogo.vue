@@ -53,6 +53,7 @@ onUnmounted(() => {
         fetchpriority="high"
         loading="eager"
         decoding="async"
+        referrerpolicy="no-referrer"
       />
       <span v-if="logoText" class="text-white text-base sm:text-xl font-bold">{{ logoText }}</span>
       <span

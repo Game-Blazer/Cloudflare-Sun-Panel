@@ -147,6 +147,10 @@ export const faviconSchema = z.object({
   url: z.string().min(1, 'url 不能为空'),
 })
 
+export const proxyIconSchema = z.object({
+  url: z.string().min(1, 'url 不能为空'),
+})
+
 export const saveAllSchema = z.record(z.string(), z.string())
 
 export const sortSchema = z.object({

@@ -9,6 +9,7 @@ import {
   sortSchema,
   getListByGroupIdSchema,
   faviconSchema,
+  proxyIconSchema,
 } from '../utils/validate'
 import { PanelService } from '../services/PanelService'
 import { ok, fail, getErrorMessage } from '../utils/response'
@@ -308,6 +309,70 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
 
     const iconUrls = Array.from(found).slice(0, 10)
     return ok(c, { iconUrls })
+  } catch (e: unknown) {
+    return fail(c, getErrorMessage(e), 500)
+  }
+})
+
+/**
+ * 代理获取外部图标
+ * POST /api/panel/itemIcon/proxyIcon
+ *
+ * 当外部图标因 Referrer-Policy 等原因无法在前端直接加载时，通过后端代理获取
+ * 并返回 base64 编码的图片数据
+ */
+panelApp.post('/itemIcon/proxyIcon', validate(proxyIconSchema), async (c) => {
+  try {
+    const { url } = c.var.validatedBody as { url: string }
+
+    if (!isValidUrl(url)) {
+      return fail(c, 'URL 不合法或包含内网地址', 400)
+    }
+
+    const abort = new AbortController()
+    const timeout = setTimeout(() => abort.abort(), 8000)
+
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
+        Accept: 'image/*',
+      },
+      signal: abort.signal,
+      redirect: 'follow',
+      cf: { cacheTtl: 86400 },
+    } as RequestInit)
+    clearTimeout(timeout)
+
+    if (!res.ok) {
+      return fail(c, '代理图标失败: 目标服务器返回错误', 502)
+    }
+
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.startsWith('image/')) {
+      return fail(c, '代理图标失败: 返回内容不是图片', 502)
+    }
+
+    const arrayBuffer = await res.arrayBuffer()
+
+    // 限制最大 500KB
+    const MAX_SIZE = 500 * 1024
+    if (arrayBuffer.byteLength > MAX_SIZE) {
+      return fail(c, '代理图标失败: 图片过大', 413)
+    }
+    if (arrayBuffer.byteLength === 0) {
+      return fail(c, '代理图标失败: 图片为空', 502)
+    }
+
+    const base64 = btoa(
+      Array.from(new Uint8Array(arrayBuffer))
+        .map((b) => String.fromCharCode(b))
+        .join(''),
+    )
+
+    return ok(c, {
+      base64: `data:${contentType};base64,${base64}`,
+      contentType,
+    })
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500)
   }

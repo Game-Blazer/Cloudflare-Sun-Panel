@@ -133,6 +133,7 @@ onUnmounted(() => {
       :fetchpriority="fetchpriority"
       loading="lazy"
       decoding="async"
+      referrerpolicy="no-referrer"
       class="lazy-img w-full h-full object-cover"
       :class="{ 'opacity-0': !loaded, 'opacity-100': loaded }"
       @load="onLoad"
