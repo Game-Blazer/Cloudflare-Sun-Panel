@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { NButton, NModal } from 'naive-ui'
 
 const props = defineProps<{
@@ -20,6 +20,17 @@ const show = computed({
   get: () => props.visible,
   set: (v) => emit('update:visible', v),
 })
+
+// 追踪每个候选图标的加载状态
+const iconLoadState = ref<Record<string, 'loading' | 'loaded' | 'error'>>({})
+
+function onIconLoad(url: string) {
+  iconLoadState.value = { ...iconLoadState.value, [url]: 'loaded' }
+}
+
+function onIconError(url: string) {
+  iconLoadState.value = { ...iconLoadState.value, [url]: 'error' }
+}
 </script>
 
 <template>
@@ -48,13 +59,20 @@ const show = computed({
               :title="iconUrl"
               @click="emit('selectIcon', iconUrl)"
             >
+              <!-- 加载骨架屏 -->
+              <div v-if="(iconLoadState[iconUrl] || 'loading') === 'loading'" class="w-4 h-4 border-2 border-gray-300 border-t-blue-400 rounded-full animate-spin" />
+              <!-- 正常图标 -->
               <img
+                v-else-if="iconLoadState[iconUrl] === 'loaded'"
                 :src="iconUrl"
                 class="w-5 h-5 object-contain"
                 alt=""
+                loading="lazy"
                 referrerpolicy="no-referrer"
-                @error="($event.target as HTMLImageElement).style.display = 'none'"
+                @load="onIconLoad(iconUrl)"
+                @error="onIconError(iconUrl)"
               />
+              <!-- 加载失败不显示任何内容（隐藏该候选） -->
             </div>
           </div>
         </div>
@@ -107,3 +125,15 @@ const show = computed({
   </NModal>
   <!-- eslint-enable vue/no-mutating-props -->
 </template>
+
+<style scoped>
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+</style>

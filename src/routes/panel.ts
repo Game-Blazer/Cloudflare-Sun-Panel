@@ -14,7 +14,11 @@ import {
 import { PanelService } from '../services/PanelService'
 import { ok, fail, getErrorMessage } from '../utils/response'
 import { AppError } from '../utils/errors'
-import { isValidUrl, parseFaviconFromHtml, probeFavicon } from '../utils/favicon'
+import { isValidUrl, normalizeInputUrl, parseFaviconFromHtml, probeFavicon, createFaviconLogger, type FaviconCandidate } from '../utils/favicon'
+
+// Favicon 发现结果缓存 (key: origin, TTL: 1小时)
+const faviconCache = new Map<string, { candidates: FaviconCandidate[]; ts: number }>()
+const FAVICON_CACHE_TTL = 60 * 60 * 1000 // 1 小时
 
 type Variables = {
   validatedBody: unknown
@@ -174,21 +178,42 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
  * 获取站点图标 (favicon)
  * POST /api/panel/itemIcon/getSiteFavicon
  *
- * 策略: 先并行 HEAD 探测常见路径，再解析 HTML <link> 标签，返回所有候选
+ * 策略:
+ * 1. 检查内存缓存 (TTL 1h)
+ * 2. 规范化输入 URL
+ * 3. 并发执行 HEAD 探测 + HTML 解析
+ * 4. 附加第三方服务兜底 (Google, DuckDuckGo)
+ * 5. 智能排序: 大尺寸 > SVG > HEAD确认 > HTML声明 > 第三方 > 兜底
+ * 6. 8 秒硬超时
  */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
+  const startTime = Date.now()
   try {
     const { url } = c.var.validatedBody as { url: string }
 
-    if (!isValidUrl(url)) {
+    // 1. 规范化输入 URL
+    const normalized = normalizeInputUrl(url)
+    if (!normalized) {
+      return fail(c, 'URL 格式不正确', 400)
+    }
+    const { origin, domain } = normalized
+
+    const logger = createFaviconLogger(domain)
+    logger.log('start')
+
+    // 2. 安全检查 (复用原有 isValidUrl)
+    if (!isValidUrl(origin)) {
       return fail(c, 'URL 不合法或包含内网地址', 400)
     }
 
-    const parsedUrl = new URL(url)
-    const origin = parsedUrl.origin
-    const found = new Set<string>()
+    // 3. 检查缓存
+    const cached = faviconCache.get(origin)
+    if (cached && (Date.now() - cached.ts) < FAVICON_CACHE_TTL) {
+      logger.hit(cached.candidates.length)
+      return ok(c, { iconUrls: cached.candidates.map(c => c.url) })
+    }
 
-    // 阶段 1: 并行 HEAD 探测常见路径（2s 超时，不下载 body）
+    // 4. 并发执行 HEAD 探测 + HTML 解析
     const probePaths = [
       '/favicon.ico',
       '/favicon.png',
@@ -196,47 +221,133 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       '/apple-touch-icon.png',
       '/apple-touch-icon-precomposed.png',
     ]
-    const probes = probePaths.map((path) => probeFavicon(origin, path))
-    const results = await Promise.allSettled(probes)
-    for (const r of results) {
+
+    const probesPromise = Promise.allSettled(
+      probePaths.map((path) => probeFavicon(origin, path))
+    )
+
+    const htmlPromise = (async (): Promise<FaviconCandidate[]> => {
+      try {
+        const abort = new AbortController()
+        const timeout = setTimeout(() => abort.abort(), 5000)
+        const res = await fetch(origin, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
+            Accept: 'text/html',
+          },
+          signal: abort.signal,
+          redirect: 'follow',
+          cf: { cacheTtl: 3600 },
+        } as RequestInit)
+        clearTimeout(timeout)
+
+        if (!res.ok) return []
+
+        const ct = res.headers.get('content-type') || ''
+        if (!ct.includes('text/html') && !ct.includes('application/xhtml')) return []
+
+        const html = await res.text()
+        return parseFaviconFromHtml(html, origin)
+      } catch {
+        return []
+      }
+    })()
+
+    // 5. 8 秒硬超时控制
+    let timedOut = false
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => { timedOut = true; resolve(null) }, 8000)
+    })
+
+    // 等待并发结果（或超时）
+    const [probeResults] = await Promise.all([
+      probesPromise,
+      Promise.race([htmlPromise, timeoutPromise]),
+    ])
+
+    // 收集 HEAD 探测结果
+    const probeCandidates: FaviconCandidate[] = []
+    const failedProbePaths = new Set<string>()
+    for (let i = 0; i < probeResults.length; i++) {
+      const r = probeResults[i]
       if (r.status === 'fulfilled' && r.value) {
-        found.add(r.value)
+        probeCandidates.push(r.value)
+      } else {
+        failedProbePaths.add(`${origin}${probePaths[i]}`)
       }
     }
 
-    // 阶段 2: 下载 HTML 并解析 <link> / <meta> 标签（5s 超时）
-    try {
-      const abort = new AbortController()
-      const timeout = setTimeout(() => abort.abort(), 5000)
-      const htmlRes = await fetch(origin, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
-          Accept: 'text/html',
-        },
-        signal: abort.signal,
-        redirect: 'follow',
-        cf: { cacheTtl: 3600 },
-      } as RequestInit)
-      clearTimeout(timeout)
-
-      if (htmlRes.ok) {
-        const html = await htmlRes.text()
-        const htmlCandidates = parseFaviconFromHtml(html, origin)
-        for (const iconUrl of htmlCandidates) {
-          found.add(iconUrl)
-        }
+    // 收集 HTML 解析结果（如果未超时）
+    let htmlCandidates: FaviconCandidate[] = []
+    if (!timedOut) {
+      const htmlResult = await Promise.race([htmlPromise, timeoutPromise])
+      if (htmlResult && Array.isArray(htmlResult)) {
+        htmlCandidates = htmlResult
       }
-    } catch {
-      /* HTML fetch failed, use probes only */
     }
 
-    // 始终包含默认 favicon.ico 作为兜底
+    logger.log('collected', `probes=${probeCandidates.length} html=${htmlCandidates.length}`)
+
+    // 6. 构建去重集合
+    const seen = new Set<string>()
+    const allCandidates: FaviconCandidate[] = []
+
+    function add(c: FaviconCandidate) {
+      if (seen.has(c.url)) return
+      seen.add(c.url)
+      allCandidates.push(c)
+    }
+
+    // 按优先级排序后加入
+    const sortCandidates = (list: FaviconCandidate[]) => {
+      list.sort((a, b) => {
+        // SVG 优先
+        const aIsSvg = a.url.endsWith('.svg')
+        const bIsSvg = b.url.endsWith('.svg')
+        if (aIsSvg && !bIsSvg) return -1
+        if (!aIsSvg && bIsSvg) return 1
+        // 大尺寸优先
+        const aSize = a.size || 0
+        const bSize = b.size || 0
+        if (aSize >= 32 && bSize < 32) return -1
+        if (bSize >= 32 && aSize < 32) return 1
+        return bSize - aSize
+      })
+    }
+
+    // 1) HEAD 探测确认有效
+    sortCandidates(probeCandidates)
+    for (const c of probeCandidates) add(c)
+
+    // 2) HTML 显式声明
+    sortCandidates(htmlCandidates)
+    for (const c of htmlCandidates) add(c)
+
+    // 3) 第三方兜底 - 国内可访问源 (参考 getFavicon-master)
+    const fallbackCandidates: FaviconCandidate[] = [
+      { url: `https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
+      { url: `https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
+      { url: `https://t1.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
+      { url: `https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
+      { url: `https://api.iowen.cn/favicon/?url=${domain}`, source: 'fallback' },
+    ]
+    for (const c of fallbackCandidates) add(c)
+
+    // 4) 兜底 /favicon.ico（仅当未被 HEAD 探测失败时添加）
     const defaultFavicon = `${origin}/favicon.ico`
-    found.add(defaultFavicon)
+    if (!failedProbePaths.has(defaultFavicon)) {
+      add({ url: defaultFavicon, source: 'default' })
+    }
 
-    const iconUrls = Array.from(found).slice(0, 10)
-    return ok(c, { iconUrls })
+    const fallbackCount = fallbackCandidates.filter(c => seen.has(c.url)).length + (failedProbePaths.has(defaultFavicon) ? 0 : 1)
+    logger.done(probeCandidates.length, htmlCandidates.length, fallbackCount, allCandidates.length)
+
+    // 7. 缓存结果
+    faviconCache.set(origin, { candidates: allCandidates, ts: Date.now() })
+
+    return ok(c, { iconUrls: allCandidates.map(c => c.url) })
   } catch (e: unknown) {
+    console.error(`[Favicon] unhandled error`, e)
     if (e instanceof AppError) {
       return fail(c, e.message, e.code, e.httpStatus)
     }
