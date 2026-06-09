@@ -173,8 +173,7 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
  * 获取站点图标 (favicon)
  * POST /api/panel/itemIcon/getSiteFavicon
  *
- * 策略: HEAD 探测 /favicon.ico + 解析 HTML <link rel="icon"> + /favicon.ico 兜底
- * 无外部 API 调用
+ * 策略: HEAD 探测 /favicon.ico + 解析 HTML <link rel="icon"> + /favicon.ico 兜底 + Google 代理
  */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
   try {
@@ -220,9 +219,11 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       /* HTML fetch failed, use probe result */
     }
 
-    // 始终包含 /favicon.ico 兜底
-    const defaultFavicon = `${origin}/favicon.ico`
-    found.add(defaultFavicon)
+    // /favicon.ico 兜底
+    found.add(`${origin}/favicon.ico`)
+
+    // Google Favicon 代理（额外候选）
+    found.add(`https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`)
 
     const iconUrls = Array.from(found).slice(0, 10)
     return ok(c, { iconUrls })
