@@ -43,7 +43,7 @@ export function useWallpaper(
   }
 
   /** 预加载首屏图标（前 N 个），加速图标渲染 */
-  function preloadIconImages(groups: PreloadGroup[], count: number = 18) {
+  function preloadIconImages(groups: PreloadGroup[], count: number = 36) {
     let loaded = 0
     const preDecode = typeof createImageBitmap !== 'undefined'
     for (const group of groups) {

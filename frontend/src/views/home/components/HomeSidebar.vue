@@ -102,7 +102,7 @@ onUnmounted(() => {
 
         <!-- 底部操作按钮（始终可见） -->
         <div class="sidebar-actions">
-          <template v-if="!authStore.isVisitMode">
+          <template v-if="authStore.isLoggedIn">
             <div class="nav-item sidebar-action-item" @click="handleSettings">
               <div class="nav-slip" />
               <span class="nav-title">设 置</span>

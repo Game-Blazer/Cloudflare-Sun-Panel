@@ -34,7 +34,7 @@ const errored = ref(false)
         width="40"
         height="40"
         :loading="eagerLoad ? 'eager' : 'lazy'"
-        decoding="async"
+        :decoding="eagerLoad ? 'sync' : 'async'"
         :fetchpriority="eagerLoad ? 'high' : 'auto'"
         referrerpolicy="no-referrer"
         @error="errored = true"

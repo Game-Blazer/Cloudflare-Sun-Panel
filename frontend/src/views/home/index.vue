@@ -24,9 +24,9 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 
-// 首屏预加载策略：前 2 个分组的前 6 个图标使用 eager 加载
-const EAGER_COUNT_PER_GROUP = 6
-const MAX_EAGER_GROUPS = 2
+// 首屏预加载策略：前 3 个分组的前 12 个图标使用 eager 加载
+const EAGER_COUNT_PER_GROUP = 12
+const MAX_EAGER_GROUPS = 3
 
 function isEagerLoad(groupIndex: number, itemIndex: number): boolean {
   return groupIndex < MAX_EAGER_GROUPS && itemIndex < EAGER_COUNT_PER_GROUP
@@ -183,10 +183,11 @@ onUnmounted(() => {
   document.documentElement.style.overflow = ''
 })
 
-// 监听登录状态变化（退出登录 → 清缓存 + 重新加载为访客数据）
+// 监听登录状态变化（退出登录 → 清缓存 + 重新加载 auth + 数据）
 watch(() => authStore.isAuthenticated, () => {
   invalidateCacheByPrefix('panel:')
-  loadData()
+  invalidateCache('site:about')
+  loadInitData()
 })
 </script>
 

@@ -103,14 +103,7 @@ body::-webkit-scrollbar {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
 }
 
-/* ========== 性能优化: CSS 内容可见性 ========== */
-/* 对分组卡片区域应用 content-visibility，延迟渲染屏幕外内容 */
-.group-section:nth-child(n+3) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 300px;
-}
-
-/* ========== 自定义加载动画 ========== */
+/* ========== 加载动画淡入淡出 ========== */
 .loader-overlay {
   position: absolute;
   inset: 0;
