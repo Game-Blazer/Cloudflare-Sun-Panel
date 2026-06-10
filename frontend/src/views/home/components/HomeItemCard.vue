@@ -24,11 +24,19 @@ const errored = ref(false)
     class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
     @click="emit('click', item)"
   >
-    <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+    <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1 relative">
+      <!-- 兜底色块：始终渲染在底层，图片加载完成前可见 -->
+      <div
+        class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }"
+      >
+        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
+      </div>
+      <!-- 图标图片：叠加在上层，加载完成后自然覆盖兜底色块 -->
       <img
         v-if="item.icon?.src && !errored"
         :src="item.icon.src"
-        class="w-full h-full object-cover"
+        class="absolute inset-0 w-full h-full object-cover rounded-lg"
         :alt="item.title"
         :loading="eagerLoad ? 'eager' : 'lazy'"
         :decoding="eagerLoad ? 'sync' : 'async'"
@@ -36,13 +44,6 @@ const errored = ref(false)
         referrerpolicy="no-referrer"
         @error="errored = true"
       />
-      <div
-        v-else
-        class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }"
-      >
-        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-      </div>
     </div>
     <span class="text-white text-[11px] sm:text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
 
