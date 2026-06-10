@@ -47,23 +47,24 @@ html, body, #app {
   box-sizing: border-box;
 }
 
-/* ========== 全局滚动条 ========== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ========== 全局滚动条隐藏 ========== */
+/* 隐藏滚动条但保持可滚动 */
+html {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge 旧版 */
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+html::-webkit-scrollbar {
+  display: none;                  /* Chrome/Edge/Safari */
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.3);
-  border-radius: 3px;
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.5);
+body::-webkit-scrollbar {
+  display: none;
 }
 
 /* ========== 全局玻璃效果工具类 ========== */
@@ -71,17 +72,20 @@ html, body, #app {
   background-color: var(--glass-bg-hover);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .glass-hover {
   background-color: var(--glass-bg);
-  transition: background-color var(--transition-normal), backdrop-filter var(--transition-normal);
+  transition: background-color var(--transition-normal), backdrop-filter var(--transition-normal), transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-hover:hover {
   background-color: var(--glass-bg-hover);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* ========== Naive UI 全局玻璃覆盖 ========== */
@@ -104,4 +108,15 @@ html, body, #app {
 .group-section:nth-child(n+3) {
   content-visibility: auto;
   contain-intrinsic-size: auto 300px;
+}
+
+/* ========== 页面切换过渡动画 ========== */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
 }

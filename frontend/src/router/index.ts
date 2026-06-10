@@ -61,5 +61,27 @@ router.beforeEach((to, _from, next) => {
 
 export async function setupRouter(app: App) {
   app.use(router)
-  await router.isReady()
+  // 异步等待路由就绪（不阻塞 mount）
+  router.isReady().then(() => {
+    // 路由就绪后预取相邻路由资源
+    prefetchAdjacentRoutes(router.currentRoute.value)
+  })
+}
+
+// 相邻路由预取：在当前页面加载完成后，空闲时预取可能访问的路由
+function prefetchAdjacentRoutes(currentRoute: ReturnType<typeof router.currentRoute.value>) {
+  const prefetchMap: Record<string, () => Promise<unknown>> = {
+    'Home': () => import(/* webpackPrefetch: true */ '@/views/home/index.vue'),
+    'login': () => import(/* webpackPrefetch: true */ '@/views/login/index.vue'),
+  }
+
+  // 使用 requestIdleCallback 在浏览器空闲时预取非当前路由
+  const idleCallback = window.requestIdleCallback || ((cb: IdleRequestCallback) => setTimeout(cb, 300))
+  idleCallback(() => {
+    for (const [name, loader] of Object.entries(prefetchMap)) {
+      if (name !== (currentRoute.name as string)) {
+        loader().catch(() => { /* 预取静默失败 */ })
+      }
+    }
+  })
 }

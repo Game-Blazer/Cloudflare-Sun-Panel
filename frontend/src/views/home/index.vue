@@ -194,7 +194,7 @@ onMounted(async () => {
     :style="glassVars"
   >
     <!-- 侧边栏分组导航 -->
-    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
+    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="(val: boolean) => { document.body.style.overflow = val ? 'hidden' : '' }" />
 
     <!-- Logo + 访客标识（独立固定定位组件） -->
     <HomeLogo />

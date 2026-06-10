@@ -9,7 +9,9 @@ async function bootstrap() {
   const app = createApp(App)
   setupStore(app)
   setupI18n(app)
-  await setupRouter(app)
+  
+  // 不再阻塞 mount：路由异步就绪，先挂载应用减少白屏时间
+  setupRouter(app)
   app.mount('#app')
 }
 

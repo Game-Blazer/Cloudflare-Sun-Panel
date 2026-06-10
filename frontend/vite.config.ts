@@ -38,8 +38,13 @@ export default defineConfig({
     sourcemap: false,
     reportCompressedSize: false,
     assetsInlineLimit: 4096,
+    // 模块预加载策略：使用 polyfill 并限制预加载数量，避免首屏时过多请求
     modulePreload: {
       polyfill: true,
+      resolveDependencies: (filename, deps) => {
+        // 只预加载当前路由直接依赖的 chunk，而非全部
+        return deps.slice(0, 3)
+      },
     },
     rollupOptions: {
       output: {

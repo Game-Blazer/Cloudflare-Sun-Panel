@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store'
 
@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'open-settings'): void
+  (e: 'sidebar-expanded', value: boolean): void
 }>()
 
 const router = useRouter()
@@ -23,6 +24,13 @@ const scrollOffset = 80
 function checkMobile() {
   isMobile.value = window.innerWidth < mobileWidth
 }
+
+// 通知父组件侧边栏展开状态变化（仅桌面端）
+watch(expanded, (val) => {
+  if (!isMobile.value) {
+    emit('sidebar-expanded', val)
+  }
+})
 
 function handleResize() {
   checkMobile()
@@ -72,7 +80,7 @@ onUnmounted(() => {
 
 <template>
   <!-- 桌面端：侧边栏 -->
-  <div v-if="!isMobile" class="sidebar-root" @mouseenter="expanded = true" @mouseleave="expanded = false">
+  <div v-if="!isMobile" class="sidebar-root" @mouseenter="expanded = true; emit('sidebar-expanded', true)" @mouseleave="expanded = false; emit('sidebar-expanded', false)">
     <div class="sidebar-bar" :class="{ expanded }">
       <div class="sidebar-inner">
         <!-- 分组导航（可滚动） -->

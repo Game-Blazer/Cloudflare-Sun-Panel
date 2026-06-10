@@ -103,6 +103,8 @@ async function handleSkipLogin() {
   backdrop-filter: blur(var(--glass-blur));
   border-radius: var(--radius-xl) !important;
   border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 0 30px rgba(74, 144, 217, 0.15), 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.3s ease;
 }
 
 .login-card :deep(.n-button) {
@@ -126,6 +128,7 @@ async function handleSkipLogin() {
   --n-border: rgba(255, 255, 255, 0.25) !important;
   --n-border-focus: rgba(255, 255, 255, 0.5) !important;
   --n-border-hover: rgba(255, 255, 255, 0.35) !important;
+  transition: all 0.3s ease;
 }
 
 :deep(.login-card .n-divider) {
