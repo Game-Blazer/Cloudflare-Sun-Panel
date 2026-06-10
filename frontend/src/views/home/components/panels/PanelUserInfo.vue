@@ -79,8 +79,6 @@ async function handleSavePassword() {
 
 function handleLogout() {
   authStore.removeToken()
-  // 强制重新导航（同一路由时 push('/') 不触发，需用 query 差异）
-  router.replace({ path: '/', query: { _: Date.now() } })
 }
 </script>
 

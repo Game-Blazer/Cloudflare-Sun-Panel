@@ -1,17 +1,12 @@
 import { ref, computed, type Ref } from 'vue'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData, getAuthInfo, getInit } from '@/api/index'
+import { getAllData, getInit } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
 
 export interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
   items: Panel.ItemInfo[]
   sortStatus?: boolean
-}
-
-interface AuthInfoResponse {
-  user: User.Info
-  visitMode: number
 }
 
 interface InitData {
@@ -33,9 +28,8 @@ export function useDataLoader(options: {
   syncWallpaper: () => void
   preloadIcons: (groups: PreloadGroup[], count?: number) => void
   onSiteConfigUpdated: (config: Panel.SiteConfig) => void
-  loadSiteConfig: () => Promise<void>
 }) {
-  const { authStore, panelState, siteConfig, syncWallpaper, preloadIcons, onSiteConfigUpdated, loadSiteConfig } = options
+  const { authStore, panelState, siteConfig, syncWallpaper, preloadIcons, onSiteConfigUpdated } = options
 
   const groups = ref<ItemGroup[]>([])
   const loading = ref(true)
@@ -45,20 +39,7 @@ export function useDataLoader(options: {
     return groups.value.filter((g) => g.publicVisible !== 0)
   })
 
-  /** 同步本地用户信息与认证状态 */
-  async function updateLocalUserInfo() {
-    try {
-      const res = await getAuthInfo<AuthInfoResponse>()
-      if (res.code === 0 && res.data) {
-        authStore.setUserInfo(res.data.user)
-        authStore.setVisitMode(res.data.visitMode)
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  /** 统一加载分组 + 图标 + 面板配置（一次 API 调用替代 N+1 次） */
+  /** 统一加载分组 + 图标 + 面板配置（缓存 5 分钟） */
   async function loadData() {
     loading.value = true
     try {
@@ -68,6 +49,7 @@ export function useDataLoader(options: {
           itemsMap: Record<number, Panel.ItemInfo[]>
           panelConfig: Panel.panelConfig
         }>(),
+        300,
       )
 
       if (res.code === 0 && res.data) {
@@ -148,12 +130,11 @@ export function useDataLoader(options: {
     }
   }
 
+  /** 刷新全部数据：清缓存 + 单次 /init 调用（替代原来的 3 次独立请求） */
   function refreshAll() {
     invalidateCacheByPrefix('panel:')
     invalidateCache('site:about')
-    Promise.all([updateLocalUserInfo(), loadSiteConfig()]).then(() => {
-      loadData()
-    })
+    loadInitData()
   }
 
   return {

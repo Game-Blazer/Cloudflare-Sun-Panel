@@ -55,7 +55,6 @@ const { groups, loading, visibleGroups, loadData, loadInitData, refreshAll } = u
   syncWallpaper: syncEffectiveWallpaper,
   preloadIcons: preloadIconImages,
   onSiteConfigUpdated: applySiteConfigToDom,
-  loadSiteConfig,
 })
 
 const { announcementVisible, announcementText, startAnnouncementTimer, dismissAnnouncement } = useAnnouncement()
@@ -184,8 +183,9 @@ onUnmounted(() => {
   document.documentElement.style.overflow = ''
 })
 
-// 监听登录状态变化（退出登录 → 自动切换为访客视图，无刷新重新加载）
+// 监听登录状态变化（退出登录 → 清缓存 + 重新加载为访客数据）
 watch(() => authStore.isAuthenticated, () => {
+  invalidateCacheByPrefix('panel:')
   loadData()
 })
 </script>
