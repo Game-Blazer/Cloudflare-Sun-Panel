@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
 import { NBackTop, NButton, NSpin, NTooltip, useMessage } from 'naive-ui'
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { deleteItems, saveItemSort } from '@/api/index'
@@ -177,6 +177,11 @@ onMounted(async () => {
   // 一次 /init 调用替代 3 次 API 请求，显著减少首次加载的网络往返
   loadInitData()
   startAnnouncementTimer()
+})
+
+// 离开首页时清理侧边栏可能遗留的 overflow 锁定
+onUnmounted(() => {
+  document.body.style.overflow = ''
 })
 </script>
 

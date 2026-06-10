@@ -18,7 +18,7 @@ const { language, dateLocale } = useLanguage()
     <NMessageProvider>
       <NDialogProvider>
         <RouterView v-slot="{ Component, route }">
-          <Transition :name="route.meta.transition || 'page-fade'" mode="out-in">
+          <Transition :name="route.meta.transition || 'page-fade'">
             <component :is="Component" :key="route.path" />
           </Transition>
         </RouterView>
