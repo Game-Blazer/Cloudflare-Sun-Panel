@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   backgroundImageSrc: string
@@ -9,36 +9,9 @@ const props = defineProps<{
 }>()
 
 const isVideo = computed(() => /\.(mp4|webm|ogg)(\?.*)?$/i.test(props.backgroundImageSrc))
-const isDynamicApi = computed(() => /(\/random|\.php|api\.)/i.test(props.backgroundImageSrc) && !isVideo.value)
-
-const proxyImageUrl = ref('')
-
-watchEffect(async (onCleanup) => {
-  if (!isDynamicApi.value || !props.backgroundImageSrc) {
-    proxyImageUrl.value = ''
-    return
-  }
-  let aborted = false
-  onCleanup(() => { aborted = true })
-  try {
-    const res = await fetch('/api/proxy-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: props.backgroundImageSrc }),
-    })
-    if (aborted) return
-    if (res.ok) {
-      const blob = await res.blob()
-      if (!aborted) proxyImageUrl.value = URL.createObjectURL(blob)
-    }
-  } catch { /* 代理获取失败，回退到直接使用原 URL */ }
-})
 
 const displaySrc = computed(() => {
   if (!props.backgroundImageSrc) return ''
-  if (isVideo.value) return props.backgroundImageSrc
-  // 动态 API：只显示代理后的 blob URL，避免先出原图再被覆盖的闪烁
-  if (isDynamicApi.value) return proxyImageUrl.value || ''
   return props.backgroundImageSrc
 })
 </script>
