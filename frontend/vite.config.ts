@@ -51,7 +51,8 @@ export default defineConfig({
         manualChunks: {
           'naive-ui': ['naive-ui'],
           'draggable': ['vue-draggable-plus'],
-          'vue-vendor': ['vue', 'vue-router', 'pinia', 'vue-i18n'],
+          'vue-core': ['vue', 'vue-router', 'pinia'],
+          'vue-i18n': ['vue-i18n'],
           'utils': ['axios', 'dompurify'],
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',

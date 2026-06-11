@@ -16,21 +16,23 @@ userConfigApp.post('/userConfig/get', publicModeMiddleware, async (c) => {
   const svc = new UserService(c.env.DB)
   const user = getAuthUser(c)!
 
-  const info = await svc.getUserInfo(user.userId)
+  const [info, row] = await Promise.all([
+    svc.getUserInfo(user.userId),
+    c.env.DB.prepare('SELECT * FROM user_configs WHERE user_id = ?').bind(user.userId).first()
+  ])
+
   if (!info) return fail(c, '用户不存在')
 
-  const row = (await c.env.DB.prepare('SELECT * FROM user_configs WHERE user_id = ?')
-    .bind(user.userId)
-    .first()) as unknown as { panel_json: string; search_engine_json: string } | null
+  const configRow = row as unknown as { panel_json: string; search_engine_json: string } | null
 
-  if (!row) {
+  if (!configRow) {
     await c.env.DB.prepare('INSERT INTO user_configs (user_id) VALUES (?)').bind(user.userId).run()
     return ok(c, { panel: {}, searchEngine: {} })
   }
 
   return ok(c, {
-    panel: JSON.parse(row.panel_json || '{}'),
-    searchEngine: JSON.parse(row.search_engine_json || '{}'),
+    panel: JSON.parse(configRow.panel_json || '{}'),
+    searchEngine: JSON.parse(configRow.search_engine_json || '{}'),
   })
 })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
 import { NBackTop, NButton, NTooltip, useMessage } from 'naive-ui'
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { defineAsyncComponent, onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { deleteItems, saveItemSort } from '@/api/index'
@@ -11,13 +11,16 @@ import { useItemEditor } from './composables/useItemEditor'
 import { useSiteConfig, SITE_CACHE_KEY } from './composables/useSiteConfig'
 import { useWallpaper } from './composables/useWallpaper'
 import { useDataLoader, type ItemGroup } from './composables/useDataLoader'
-import HomeAppStarter from './components/HomeAppStarter.vue'
+// 首屏必须同步加载的
 import HomeSidebar from './components/HomeSidebar.vue'
 import HomeLogo from './components/HomeLogo.vue'
 import HomeWallpaper from './components/HomeWallpaper.vue'
 import HomeItemCard from './components/HomeItemCard.vue'
-import HomeEditIconModal from './components/HomeEditIconModal.vue'
-import HomeIframeModal from './components/HomeIframeModal.vue'
+
+// 懒加载的非首屏组件
+const HomeAppStarter = defineAsyncComponent(() => import('./components/HomeAppStarter.vue'))
+const HomeEditIconModal = defineAsyncComponent(() => import('./components/HomeEditIconModal.vue'))
+const HomeIframeModal = defineAsyncComponent(() => import('./components/HomeIframeModal.vue'))
 import { useFavicon } from './composables/useFavicon'
 
 const message = useMessage()
@@ -27,9 +30,15 @@ const panelState = usePanelState()
 // 首屏预加载策略：前 3 个分组的前 12 个图标使用 eager 加载
 const EAGER_COUNT_PER_GROUP = 12
 const MAX_EAGER_GROUPS = 3
+const eagerKeySet = new Set<string>()
 
-function isEagerLoad(groupIndex: number, itemIndex: number): boolean {
-  return groupIndex < MAX_EAGER_GROUPS && itemIndex < EAGER_COUNT_PER_GROUP
+function buildEagerSet() {
+  eagerKeySet.clear()
+  for (let gi = 0; gi < MAX_EAGER_GROUPS; gi++) {
+    for (let ii = 0; ii < EAGER_COUNT_PER_GROUP; ii++) {
+      eagerKeySet.add(`${gi}-${ii}`)
+    }
+  }
 }
 
 const safeFooterHtml = computed(() => {
@@ -184,6 +193,7 @@ function handleGroupSaved() {
 
 onMounted(async () => {
   syncGlassVars()
+  buildEagerSet()
   // 一次 /init 调用替代 3 次 API 请求，显著减少首次加载的网络往返
   loadInitData()
   startAnnouncementTimer()
@@ -303,7 +313,7 @@ watch(() => authStore.isLoggedIn, (val) => {
                 :item="item"
                 :editable="true"
                 :is-edit-mode="true"
-                :eager-load="isEagerLoad(gi, ii)"
+                :eager-load="eagerKeySet.has(`${gi}-${ii}`)"
                 @click="openUrl"
                 @edit="openEditItem"
                 @delete="handleDeleteItem"
@@ -322,7 +332,7 @@ watch(() => authStore.isLoggedIn, (val) => {
                     :item="item"
                     :editable="false"
                     :is-edit-mode="false"
-                    :eager-load="isEagerLoad(gi, ii)"
+                    :eager-load="eagerKeySet.has(`${gi}-${ii}`)"
                     @click="openUrl"
                   />
                 </template>

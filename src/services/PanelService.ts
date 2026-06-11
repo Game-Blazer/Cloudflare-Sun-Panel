@@ -88,8 +88,20 @@ export class PanelService {
         body.itemIconGroupId, body.id, userId
       ).run()
 
-      const row = await queryFirst<ItemIconRow>(this.db, `${ICON_SELECT} WHERE id = ?`, body.id)
-      return this.formatIcon(row as ItemIconRow)
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      return {
+        id: body.id as number,
+        icon: body.icon || {},
+        title: body.title,
+        url: body.url,
+        description: body.description || '',
+        openMethod: body.openMethod || 0,
+        sort: body.sort || 0,
+        itemIconGroupId: body.itemIconGroupId,
+        userId,
+        createTime: now,
+        updateTime: now,
+      }
     } else {
       const result = await this.db.prepare(
         'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -99,9 +111,20 @@ export class PanelService {
         body.itemIconGroupId, userId
       ).run()
 
-      const row = await queryFirst<ItemIconRow>(this.db,
-        `${ICON_SELECT} WHERE id = ?`, result.meta.last_row_id)
-      return this.formatIcon(row as ItemIconRow)
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      return {
+        id: result.meta.last_row_id as number,
+        icon: body.icon || {},
+        title: body.title,
+        url: body.url,
+        description: body.description || '',
+        openMethod: body.openMethod || 0,
+        sort: body.sort || 0,
+        itemIconGroupId: body.itemIconGroupId,
+        userId,
+        createTime: now,
+        updateTime: now,
+      }
     }
   }
 
@@ -146,8 +169,18 @@ export class PanelService {
         body.sort || 0, body.publicVisible ?? 1, body.id, userId
       ).run()
 
-      const row = await queryFirst<ItemIconGroupRow>(this.db, `${GROUP_SELECT} WHERE id = ?`, body.id)
-      return this.formatGroup(row as ItemIconGroupRow)
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      return {
+        id: body.id as number,
+        icon: body.icon || '',
+        title: body.title,
+        description: body.description || '',
+        sort: body.sort || 0,
+        publicVisible: body.publicVisible ?? 1,
+        userId,
+        createTime: now,
+        updateTime: now,
+      }
     } else {
       const result = await this.db.prepare(
         'INSERT INTO item_icon_groups (icon, title, description, sort, public_visible, user_id) VALUES (?, ?, ?, ?, ?, ?)'
@@ -156,9 +189,18 @@ export class PanelService {
         body.sort || 0, body.publicVisible ?? 1, userId
       ).run()
 
-      const row = await queryFirst<ItemIconGroupRow>(this.db,
-        `${GROUP_SELECT} WHERE id = ?`, result.meta.last_row_id)
-      return this.formatGroup(row as ItemIconGroupRow)
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      return {
+        id: result.meta.last_row_id as number,
+        icon: body.icon || '',
+        title: body.title,
+        description: body.description || '',
+        sort: body.sort || 0,
+        publicVisible: body.publicVisible ?? 1,
+        userId,
+        createTime: now,
+        updateTime: now,
+      }
     }
   }
 

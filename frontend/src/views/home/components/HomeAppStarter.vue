@@ -11,6 +11,7 @@ import PanelAnnounceSettings from './panels/PanelAnnounceSettings.vue'
 import PanelGroupManage from './panels/PanelGroupManage.vue'
 import PanelImportExport from './panels/PanelImportExport.vue'
 import PanelSiteSettings from './panels/PanelSiteSettings.vue'
+import AppStarterSidebar from './AppStarterSidebar.vue'
 
 interface App {
   name: string
@@ -148,25 +149,12 @@ function handleGroupSaved() {
       </div>
     </template>
     <NLayout has-sider :style="`height:${layoutHeight};border-radius:0.75rem;`">
-      <NLayoutSider
-        :collapsed="collapsed"
-        collapse-mode="width"
-        :collapsed-width="0"
-        :width="isSmallScreen ? '100%' : 180"
-        content-style="overflow: hidden"
-      >
-        <div class="h-full dark:bg-[#2c2c32] p-2">
-          <div
-            v-for="app in apps" :key="app.key"
-            class="px-3 py-2.5 rounded-lg mb-1 cursor-pointer font-medium text-sm flex items-center gap-2 transition-colors"
-            :class="activeApp === app.key ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'"
-            @click="activeApp = app.key; if (isSmallScreen) collapsed = true"
-          >
-            <span>{{ app.icon }}</span>
-            <span>{{ app.name }}</span>
-          </div>
-        </div>
-      </NLayoutSider>
+      <AppStarterSidebar
+        :apps="apps"
+        v-model:active-app="activeApp"
+        v-model:collapsed="collapsed"
+        :is-small-screen="isSmallScreen"
+      />
       <NLayoutContent :content-style="`height:${layoutHeight}`">
         <div class="h-full overflow-auto p-3 sm:p-4">
 

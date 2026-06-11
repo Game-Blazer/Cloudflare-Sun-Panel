@@ -87,12 +87,12 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<void
   }
 
   // 查询公开模式设置
-  const settings = await db.batch([
-    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'"),
-    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'"),
-  ])
-  const publicUserIdValue = (settings[0].results[0] as { config_value: string } | undefined)?.config_value ?? null
-  const guestModeValue = (settings[1].results[0] as { config_value: string } | undefined)?.config_value ?? null
+  const settingsResult = await db
+    .prepare("SELECT config_name, config_value FROM system_settings WHERE config_name = 'panel_public_user_id' OR config_name = 'default_guest_mode'")
+    .all<{ config_name: string; config_value: string }>()
+  const rows = settingsResult.results
+  const publicUserIdValue = rows.find(r => r.config_name === 'panel_public_user_id')?.config_value ?? null
+  const guestModeValue = rows.find(r => r.config_name === 'default_guest_mode')?.config_value ?? null
 
   let targetUser: Record<string, unknown> | null = null
 
