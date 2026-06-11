@@ -56,16 +56,16 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen"
     :style="loginPageStyle"
   >
-    <!-- 加载动画 -->
+    <!-- 骨架屏加载 -->
     <Transition name="loader-fade">
-      <div v-if="pageLoading" class="loader-overlay" style="position:fixed;inset:0;z-index:50;">
-        <div class="loader-ring">
-          <div class="loader-ring-inner" />
-        </div>
-        <p class="loader-text">加载中...</p>
+      <div v-if="pageLoading" class="flex items-center justify-center" style="position:fixed;inset:0;z-index:50;">
+        <div class="skeleton-login-card" />
       </div>
     </Transition>
-    <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle" :class="{ 'opacity-0': pageLoading, 'transition-opacity duration-300': !pageLoading }">
+
+    <!-- 登录卡片（淡入） -->
+    <Transition name="content-fade">
+      <NCard v-if="!pageLoading" class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}
@@ -101,6 +101,7 @@ async function handleSkipLogin() {
         <NButton block size="large" secondary @click="handleSkipLogin">以访客身份浏览</NButton>
       </template>
     </NCard>
+    </Transition>
   </div>
 </template>
 

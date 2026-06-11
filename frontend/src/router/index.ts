@@ -38,7 +38,7 @@ router.beforeEach((to, _from, next) => {
   const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
 
   // 已登录用户访问登录页，直接跳转首页
-  if (to.name === 'login' && authStore.token) {
+  if (to.name === 'login' && authStore.isLoggedIn) {
     next({ name: 'Home' })
     return
   }

@@ -34,9 +34,36 @@
         }
     </style>
 
-    <!-- 壁纸预加载：在 Vue 挂载前立即触发，加速首屏背景渲染 -->
+    <!-- 站点标题 & favicon + 壁纸预加载：在 Vue 挂载前立即触发 -->
     <script>
     (function() {
+      // ===== 1. 站点标题和 favicon 预注入 =====
+      try {
+        var siteConfigRaw = localStorage.getItem('sun-panel-site-config');
+        if (siteConfigRaw) {
+          var siteConfig = JSON.parse(siteConfigRaw);
+          if (siteConfig.site_title) {
+            document.title = siteConfig.site_title;
+          }
+          if (siteConfig.favicon_url) {
+            var timestamp = '_t=' + Date.now();
+            var favUrl = siteConfig.favicon_url;
+            var sep = favUrl.indexOf('?') > -1 ? '&' : '?';
+            var favWithTs = favUrl + sep + timestamp;
+
+            var iconLink = document.querySelector('link[rel="icon"]');
+            if (iconLink) iconLink.href = favWithTs;
+
+            var appleLink = document.querySelector('link[rel="apple-touch-icon"]');
+            if (appleLink) appleLink.href = favWithTs;
+
+            var maskLink = document.querySelector('link[rel="mask-icon"]');
+            if (maskLink) maskLink.href = favWithTs;
+          }
+        }
+      } catch(e) {}
+
+      // ===== 2. 壁纸预加载 =====
       var key = 'sun-panel-effective-wallpaper';
       var wallpaper = localStorage.getItem(key);
       if (!wallpaper) return;

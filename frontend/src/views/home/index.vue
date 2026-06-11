@@ -241,18 +241,16 @@ watch(() => authStore.isLoggedIn, (val) => {
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
 
-      <!-- 自定义加载动画 -->
+      <!-- 骨架屏加载 -->
       <Transition name="loader-fade">
-        <div v-if="loading" class="loader-overlay">
-          <div class="loader-ring">
-            <div class="loader-ring-inner" />
-          </div>
-          <p class="loader-text">加载中...</p>
+        <div v-if="loading" class="flex flex-wrap gap-2 sm:gap-3 justify-center py-4">
+          <div v-for="n in 12" :key="n" class="skeleton-card" />
         </div>
       </Transition>
 
-      <!-- 内容（加载中时降低可见度） -->
-      <div :class="{ 'opacity-0': loading, 'transition-opacity duration-300': !loading }">
+      <!-- 内容（淡入） -->
+      <Transition name="content-fade">
+      <div v-if="!loading">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
@@ -327,6 +325,7 @@ watch(() => authStore.isLoggedIn, (val) => {
           </div>
         </template>
       </div>
+      </Transition>
     </div>
 
     <!-- 自定义页脚 -->
@@ -381,26 +380,6 @@ watch(() => authStore.isLoggedIn, (val) => {
   </div>
 </template>
 
-<style scoped>
-.group-section:hover .group-title-btns {
-  opacity: 1;
-}
 
-/* 移动端触屏设备始终显示编辑按钮 */
-@media (hover: none) {
-  .group-title-btns {
-    opacity: 1;
-  }
-}
-
-.announce-fade-enter-active,
-.announce-fade-leave-active {
-  transition: opacity 0.4s ease;
-}
-.announce-fade-enter-from,
-.announce-fade-leave-to {
-  opacity: 0;
-}
-</style>
 
 

@@ -34,4 +34,14 @@ function updateFavicon(url: string) {
   link.href = url + separator + '_t=' + Date.now()
 }
 
-export { DEFAULT_FAVICON, detectFaviconType, updateFavicon }
+const SITE_CACHE_KEY = 'sun-panel-site-config'
+
+function getCachedSiteConfig(): Panel.SiteConfig {
+  try {
+    const cached = localStorage.getItem(SITE_CACHE_KEY)
+    if (cached) return JSON.parse(cached) as Panel.SiteConfig
+  } catch { /* ignore */ }
+  return {}
+}
+
+export { DEFAULT_FAVICON, detectFaviconType, updateFavicon, SITE_CACHE_KEY, getCachedSiteConfig }

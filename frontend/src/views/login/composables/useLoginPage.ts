@@ -2,11 +2,10 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
-import { DEFAULT_FAVICON, detectFaviconType, updateFavicon } from '@/utils/faviconUtils'
+import { DEFAULT_FAVICON, detectFaviconType, updateFavicon, getCachedSiteConfig, SITE_CACHE_KEY } from '@/utils/faviconUtils'
 
 const LOGIN_BG_CACHE_KEY = 'sun-panel-login-bg'
 const LOGIN_STYLE_CACHE_KEY = 'sun-panel-login-style'
-const SITE_CACHE_KEY = 'sun-panel-site-config'
 
 interface CachedLoginStyle {
   blur: number
@@ -45,13 +44,9 @@ if (cachedLoginBg) {
 }
 
 // 从站点缓存恢复标题和图标
-let cachedTitle = 'Sun-Panel'
-let cachedFavicon = ''
-try {
-  const siteCache = JSON.parse(localStorage.getItem(SITE_CACHE_KEY) || '{}')
-  if (siteCache.site_title) cachedTitle = siteCache.site_title
-  if (siteCache.favicon_url) cachedFavicon = siteCache.favicon_url
-} catch { /* ignore */ }
+const cachedSiteConfig = getCachedSiteConfig()
+const cachedTitle = cachedSiteConfig.site_title || 'Sun-Panel'
+const cachedFavicon = cachedSiteConfig.favicon_url || ''
 
 // 立即应用缓存的标题和图标（浏览器标签页）
 document.title = cachedTitle

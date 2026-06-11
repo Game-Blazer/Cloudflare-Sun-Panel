@@ -142,24 +142,87 @@ body::-webkit-scrollbar {
   }
 }
 
-/* 加载动画淡入淡出 */
-.loader-fade-enter-active {
-  transition: opacity 0.15s ease;
-}
+/* 加载动画淡出 */
 .loader-fade-leave-active {
-  transition: opacity 0.45s ease;
+  transition: opacity 0.3s ease-out;
 }
-.loader-fade-enter-from,
 .loader-fade-leave-to {
+  opacity: 0;
+}
+
+/* 内容淡入（延迟实现与加载动画重叠） */
+.content-fade-enter-active {
+  transition: opacity 0.4s ease-in;
+  transition-delay: 0.15s;
+}
+.content-fade-enter-from {
   opacity: 0;
 }
 
 /* ========== 页面切换过渡动画 ========== */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.25s ease;
+  transition: opacity 0.3s ease;
 }
 .page-fade-enter-from,
 .page-fade-leave-to {
   opacity: 0;
+}
+
+/* ========== 首页分组标题按钮 ========== */
+.group-section:hover .group-title-btns {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .group-title-btns {
+    opacity: 1;
+  }
+}
+
+/* ========== 公告淡入淡出 ========== */
+.announce-fade-enter-active,
+.announce-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.announce-fade-enter-from,
+.announce-fade-leave-to {
+  opacity: 0;
+}
+
+/* ========== 骨架屏动画 ========== */
+@keyframes skeleton-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton-card {
+  width: 80px;
+  height: 80px;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@media (min-width: 640px) {
+  .skeleton-card {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+@media (min-width: 768px) {
+  .skeleton-card {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+.skeleton-login-card {
+  width: min(92vw, 384px);
+  height: 280px;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }

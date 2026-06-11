@@ -1,19 +1,13 @@
 import { ref } from 'vue'
 import { getAbout } from '@/api/index'
 import { cachedRequest } from '@/utils/requestCache'
-import { DEFAULT_FAVICON, detectFaviconType, updateFavicon } from '@/utils/faviconUtils'
+import { DEFAULT_FAVICON, detectFaviconType, updateFavicon, SITE_CACHE_KEY, getCachedSiteConfig } from '@/utils/faviconUtils'
 
-export const SITE_CACHE_KEY = 'sun-panel-site-config'
+export { SITE_CACHE_KEY }
 
 export function useSiteConfig() {
   function loadCachedSiteConfig(): Panel.SiteConfig {
-    try {
-      const cached = localStorage.getItem(SITE_CACHE_KEY)
-      if (cached) return JSON.parse(cached) as Panel.SiteConfig
-    } catch {
-      /* ignore */
-    }
-    return {}
+    return getCachedSiteConfig()
   }
 
   const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
