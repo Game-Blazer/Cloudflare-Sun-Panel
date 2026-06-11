@@ -37,7 +37,8 @@ watchEffect(async (onCleanup) => {
 const displaySrc = computed(() => {
   if (!props.backgroundImageSrc) return ''
   if (isVideo.value) return props.backgroundImageSrc
-  if (isDynamicApi.value && proxyImageUrl.value) return proxyImageUrl.value
+  // 动态 API：只显示代理后的 blob URL，避免先出原图再被覆盖的闪烁
+  if (isDynamicApi.value) return proxyImageUrl.value || ''
   return props.backgroundImageSrc
 })
 </script>
