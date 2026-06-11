@@ -44,7 +44,9 @@ const { effectiveBackgroundImage, syncEffectiveWallpaper, preloadIconImages } = 
 function applySiteConfigToDom(config: Panel.SiteConfig) {
   localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
   siteConfigLoaded.value = true
-  document.title = config.site_title || 'Sun-Panel'
+  if (config.site_title) {
+    document.title = config.site_title
+  }
   updateFavicon(config.favicon_url || '')
 }
 

@@ -37,7 +37,9 @@ export function useSiteConfig() {
         }
         localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
         siteConfigLoaded.value = true
-        document.title = siteConfig.value.site_title || 'Sun-Panel'
+        if (siteConfig.value.site_title) {
+          document.title = siteConfig.value.site_title
+        }
         updateFavicon(siteConfig.value.favicon_url || '')
       }
     } catch {
@@ -48,7 +50,9 @@ export function useSiteConfig() {
   function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     siteConfig.value = config
     localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
-    document.title = config.site_title || 'Sun-Panel'
+    if (config.site_title) {
+      document.title = config.site_title
+    }
     updateFavicon(config.favicon_url || '')
   }
 
