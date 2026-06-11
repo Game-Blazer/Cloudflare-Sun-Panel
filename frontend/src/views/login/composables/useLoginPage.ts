@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
-import { DEFAULT_FAVICON, detectFaviconType, updateFavicon, getCachedSiteConfig, SITE_CACHE_KEY } from '@/utils/faviconUtils'
+import { updateFavicon, getCachedSiteConfig, SITE_CACHE_KEY } from '@/utils/faviconUtils'
 
 const LOGIN_BG_CACHE_KEY = 'sun-panel-login-bg'
 const LOGIN_STYLE_CACHE_KEY = 'sun-panel-login-style'

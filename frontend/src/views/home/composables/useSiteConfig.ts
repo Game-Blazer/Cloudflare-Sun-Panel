@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { getAbout } from '@/api/index'
 import { cachedRequest } from '@/utils/requestCache'
-import { DEFAULT_FAVICON, detectFaviconType, updateFavicon, SITE_CACHE_KEY, getCachedSiteConfig } from '@/utils/faviconUtils'
+import { updateFavicon, SITE_CACHE_KEY, getCachedSiteConfig } from '@/utils/faviconUtils'
 
 export { SITE_CACHE_KEY }
 
